@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Results — QuizForge</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <a href="index.html" class="logo">Quiz<span>Forge</span></a>
+    <div class="navbar-links">
+      <div class="theme-toggle">
+        <label class="toggle-switch">
+          <input type="checkbox" class="dark-toggle-input" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+  </nav>
+
+  <main class="result-page">
+    <div class="container-sm">
+      <!-- Score Circle -->
+      <div style="text-align:center;" class="animate-in">
+        <div id="score-circle" class="score-circle">
+          <div class="score-percent" id="score-pct">–</div>
+          <div class="score-label">SCORE</div>
+        </div>
+        <h1 id="result-title" style="margin-bottom:0.5rem;"></h1>
+        <p id="result-subtitle" style="font-size:1.1rem;"></p>
+      </div>
+
+      <!-- Stats row -->
+      <div class="result-stats animate-in animate-delay-1">
+        <div class="result-stat-card">
+          <div class="stat-value" id="stat-correct">–</div>
+          <div class="stat-label">Correct</div>
+        </div>
+        <div class="result-stat-card">
+          <div class="stat-value" id="stat-wrong">–</div>
+          <div class="stat-label">Wrong</div>
+        </div>
+        <div class="result-stat-card">
+          <div class="stat-value" id="stat-total">–</div>
+          <div class="stat-label">Total</div>
+        </div>
+      </div>
+
+      <!-- Review section -->
+      <div class="card animate-in animate-delay-2" style="margin-bottom:2rem;">
+        <div class="card-header">
+          <h4>Answer Review</h4>
+          <span id="quiz-name-header" class="badge badge-muted"></span>
+        </div>
+        <div id="answer-review" class="card-body stack stack-2"></div>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex-center" style="gap:1rem;flex-wrap:wrap;" class="animate-in animate-delay-3">
+        <button class="btn btn-secondary" onclick="history.back()">Retake Quiz</button>
+        <a href="index.html" class="btn btn-primary">Create Your Own Quiz →</a>
+      </div>
+    </div>
+  </main>
+
+  <script src="script.js"></script>
+  <script src="supabase.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(location.search);
+      const score = parseInt(params.get('score') || '0');
+      const total = parseInt(params.get('total') || '0');
+      const percentage = parseInt(params.get('percentage') || '0');
+      const title = params.get('title') || 'Quiz';
+      const answers = JSON.parse(params.get('answers') || '[]');
+      const correct = JSON.parse(params.get('correct') || '[]');
+
+      // Score circle color
+      const circle = document.getElementById('score-circle');
+      if (percentage >= 80) circle.style.borderColor = 'var(--success)';
+      else if (percentage >= 50) circle.style.borderColor = 'var(--warning)';
+      else circle.style.borderColor = 'var(--danger)';
+
+      document.getElementById('score-pct').textContent = percentage + '%';
+
+      // Message
+      let message, subtitle;
+      if (percentage >= 90) { message = 'Outstanding! 🏆'; subtitle = 'You aced it!'; }
+      else if (percentage >= 75) { message = 'Great job! 🎉'; subtitle = 'Well done!'; }
+      else if (percentage >= 50) { message = 'Good effort! 👍'; subtitle = 'Keep practicing.'; }
+      else { message = 'Keep trying! 💪'; subtitle = 'Review and try again.'; }
+
+      document.getElementById('result-title').textContent = message;
+      document.getElementById('result-subtitle').textContent = subtitle;
+      document.getElementById('quiz-name-header').textContent = title;
+
+      const wrong = total - score;
+      document.getElementById('stat-correct').textContent = score;
+      document.getElementById('stat-wrong').textContent = wrong;
+      document.getElementById('stat-total').textContent = total;
+
+      // Answer review (requires question data, but we only have A/B/C/D choices)
+      const reviewEl = document.getElementById('answer-review');
+      if (answers.length > 0 && correct.length > 0) {
+        reviewEl.innerHTML = answers.map((ans, i) => {
+          const isCorrect = ans === correct[i];
+          const statusIcon = ans === null ? '⏭' : (isCorrect ? '✓' : '✗');
+          const statusColor = ans === null ? 'var(--text-muted)' : (isCorrect ? 'var(--success)' : 'var(--danger)');
+          return `
+            <div style="display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0;border-bottom:1px solid var(--border);">
+              <div style="width:28px;height:28px;border-radius:50%;background:${statusColor}22;display:flex;align-items:center;justify-content:center;font-size:0.875rem;font-weight:700;color:${statusColor};flex-shrink:0;">${statusIcon}</div>
+              <div style="flex:1;">
+                <div style="font-size:0.85rem;font-weight:600;color:var(--text-primary);">Question ${i + 1}</div>
+                <div style="font-size:0.78rem;color:var(--text-secondary);">
+                  Your answer: <strong style="color:${statusColor}">${ans || 'Skipped'}</strong>
+                  ${!isCorrect && ans !== null ? `&nbsp;·&nbsp; Correct: <strong style="color:var(--success)">${correct[i]}</strong>` : ''}
+                </div>
+              </div>
+            </div>`;
+        }).join('');
+      } else {
+        reviewEl.innerHTML = '<p>No review data available.</p>';
+      }
+    });
+  </script>
+</body>
+</html>

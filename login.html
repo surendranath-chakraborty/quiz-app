@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login — QuizForge</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-card card animate-in">
+      <div class="card-body">
+        <!-- Logo -->
+        <div class="auth-header">
+          <div class="auth-logo">Quiz<span>Forge</span></div>
+          <p style="font-size:0.9rem;">Your smart quiz creation platform</p>
+        </div>
+
+        <!-- Dark mode toggle (top right corner) -->
+        <div style="position:absolute;top:1.25rem;right:1.25rem;">
+          <label class="toggle-switch" title="Toggle dark mode">
+            <input type="checkbox" class="dark-toggle-input" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <!-- Tabs: Login / Sign Up -->
+        <div class="auth-tabs">
+          <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Login</button>
+          <button class="auth-tab" id="tab-signup" onclick="switchTab('signup')">Sign Up</button>
+        </div>
+
+        <!-- Alert container -->
+        <div id="auth-alert"></div>
+
+        <!-- Login Form -->
+        <form id="login-form" class="stack stack-2" onsubmit="handleLogin(event)">
+          <div class="form-group">
+            <label class="form-label" for="login-email">Email</label>
+            <input class="form-input" id="login-email" type="email" placeholder="you@example.com" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="login-password">Password</label>
+            <input class="form-input" id="login-password" type="password" placeholder="••••••••" required />
+          </div>
+          <button type="submit" class="btn btn-primary" id="login-btn">
+            Login to Dashboard
+          </button>
+        </form>
+
+        <!-- Sign Up Form (hidden by default) -->
+        <form id="signup-form" class="stack stack-2" style="display:none;" onsubmit="handleSignup(event)">
+          <div class="form-group">
+            <label class="form-label" for="signup-email">Email</label>
+            <input class="form-input" id="signup-email" type="email" placeholder="you@example.com" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="signup-password">Password</label>
+            <input class="form-input" id="signup-password" type="password" placeholder="Min. 6 characters" minlength="6" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="signup-confirm">Confirm Password</label>
+            <input class="form-input" id="signup-confirm" type="password" placeholder="Repeat password" required />
+          </div>
+          <button type="submit" class="btn btn-primary" id="signup-btn">
+            Create Free Account
+          </button>
+        </form>
+
+        <p style="text-align:center;font-size:0.8rem;margin-top:1rem;color:var(--text-muted);">
+          <a href="index.html">← Back to home</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+  <script src="supabase.js"></script>
+  <script>
+    // If already logged in, go to dashboard
+    (async () => {
+      const user = await getCurrentUser();
+      if (user) window.location.href = 'dashboard.html';
+    })();
+
+    function switchTab(tab) {
+      const isLogin = tab === 'login';
+      document.getElementById('tab-login').classList.toggle('active', isLogin);
+      document.getElementById('tab-signup').classList.toggle('active', !isLogin);
+      document.getElementById('login-form').style.display = isLogin ? '' : 'none';
+      document.getElementById('signup-form').style.display = isLogin ? 'none' : '';
+      document.getElementById('auth-alert').innerHTML = '';
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const btn = document.getElementById('login-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Logging in…';
+
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+
+      const { error } = await signIn(email, password);
+      if (error) {
+        showAlert('auth-alert', error.message, 'error');
+        btn.disabled = false;
+        btn.textContent = 'Login to Dashboard';
+      } else {
+        showAlert('auth-alert', 'Welcome back! Redirecting…', 'success');
+        setTimeout(() => window.location.href = 'dashboard.html', 800);
+      }
+    }
+
+    async function handleSignup(e) {
+      e.preventDefault();
+      const btn = document.getElementById('signup-btn');
+
+      const email = document.getElementById('signup-email').value;
+      const password = document.getElementById('signup-password').value;
+      const confirm = document.getElementById('signup-confirm').value;
+
+      if (password !== confirm) {
+        showAlert('auth-alert', 'Passwords do not match.', 'error');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Creating account…';
+
+      const { error } = await signUp(email, password);
+      if (error) {
+        showAlert('auth-alert', error.message, 'error');
+        btn.disabled = false;
+        btn.textContent = 'Create Free Account';
+      } else {
+        showAlert('auth-alert', '✓ Account created! Check your email to confirm, then login.', 'success');
+        btn.disabled = false;
+        btn.textContent = 'Create Free Account';
+        setTimeout(() => switchTab('login'), 3000);
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — QuizForge</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <!-- ── NAVBAR ── -->
+  <nav class="navbar">
+    <a href="dashboard.html" class="logo">Quiz<span>Forge</span></a>
+    <div class="navbar-links">
+      <a href="analytics.html" class="btn btn-ghost btn-sm">📈 Analytics</a>
+      <div class="theme-toggle">
+        <label class="toggle-switch">
+          <input type="checkbox" class="dark-toggle-input" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <span id="user-email" style="font-size:0.8rem;color:var(--text-muted);"></span>
+      <button class="btn btn-ghost btn-sm" onclick="handleLogout()">Logout</button>
+    </div>
+  </nav>
+
+  <!-- ── MAIN ── -->
+  <main class="page">
+    <div class="container">
+      <!-- Header -->
+      <div class="dashboard-header animate-in">
+        <div>
+          <h1>My Quizzes</h1>
+          <p>Create, manage, and share your quizzes.</p>
+        </div>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+          <button class="btn btn-secondary" onclick="openCSVModal()">📁 Import CSV</button>
+          <button class="btn btn-primary" onclick="openCreateModal()">+ New Quiz</button>
+        </div>
+      </div>
+
+      <!-- Alert -->
+      <div id="dash-alert"></div>
+
+      <!-- Quiz Grid -->
+      <div id="quiz-grid" class="quiz-grid">
+        <div class="flex-center" style="grid-column:1/-1;padding:3rem;">
+          <div class="spinner" style="width:32px;height:32px;"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ══════ CREATE QUIZ MODAL ══════ -->
+  <div id="create-modal" class="modal-overlay" style="display:none;" onclick="closeOnBackdrop(event,'create-modal')">
+    <div class="modal" style="max-width:780px;" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Create New Quiz</h3>
+        <button class="btn btn-ghost btn-icon" onclick="closeModal('create-modal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="modal-alert"></div>
+
+        <!-- Quiz Info -->
+        <div class="stack stack-2" style="margin-bottom:1.5rem;">
+          <div class="grid-2">
+            <div class="form-group">
+              <label class="form-label">Quiz Title *</label>
+              <input class="form-input" id="quiz-title" placeholder="e.g. JavaScript Fundamentals" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Timer per Question (sec)</label>
+              <input class="form-input" id="quiz-timer" type="number" min="0" max="300" placeholder="0 = no timer" value="30" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Description</label>
+            <textarea class="form-textarea" id="quiz-desc" placeholder="Optional description for quiz takers…" style="min-height:70px;"></textarea>
+          </div>
+        </div>
+
+        <hr class="divider" />
+
+        <!-- Questions -->
+        <div class="flex-between" style="margin-bottom:1rem;">
+          <h4>Questions</h4>
+          <button class="btn btn-secondary btn-sm" onclick="addQuestion()">+ Add Question</button>
+        </div>
+        <div id="questions-container" class="stack stack-2"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('create-modal')">Cancel</button>
+        <button class="btn btn-primary" id="save-quiz-btn" onclick="saveQuiz()">Save & Publish Quiz</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ CSV IMPORT MODAL ══════ -->
+  <div id="csv-modal" class="modal-overlay" style="display:none;" onclick="closeOnBackdrop(event,'csv-modal')">
+    <div class="modal" style="max-width:700px;" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Import Quiz from CSV</h3>
+        <button class="btn btn-ghost btn-icon" onclick="closeModal('csv-modal')">✕</button>
+      </div>
+      <div class="modal-body stack stack-2">
+        <div id="csv-alert"></div>
+
+        <!-- CSV format hint -->
+        <div class="alert alert-info">
+          <div>
+            <strong>Expected format:</strong><br />
+            <code style="font-family:var(--font-mono);font-size:0.8rem;">Question,Option A,Option B,Option C,Option D,Correct Option</code><br />
+            <small>Correct Option should be: A, B, C, or D</small>
+          </div>
+        </div>
+
+        <!-- Quiz info for CSV import -->
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Quiz Title *</label>
+            <input class="form-input" id="csv-quiz-title" placeholder="My Imported Quiz" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Timer per Question (sec)</label>
+            <input class="form-input" id="csv-quiz-timer" type="number" min="0" max="300" value="30" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <input class="form-input" id="csv-quiz-desc" placeholder="Optional description" />
+        </div>
+
+        <!-- Upload zone -->
+        <div class="upload-zone" id="upload-zone" onclick="document.getElementById('csv-file').click()">
+          <input type="file" id="csv-file" accept=".csv,text/csv" onchange="handleCSVFile(event)" />
+          <div style="font-size:2rem;margin-bottom:0.5rem;">📁</div>
+          <p style="margin:0;font-weight:600;color:var(--text-primary);">Click to upload CSV file</p>
+          <p style="font-size:0.8rem;margin-top:0.25rem;">or drag and drop</p>
+        </div>
+
+        <!-- Preview -->
+        <div id="csv-preview-section" style="display:none;">
+          <hr class="divider" />
+          <div class="flex-between" style="margin-bottom:0.75rem;">
+            <h4 id="csv-preview-count"></h4>
+            <button class="btn btn-ghost btn-sm" onclick="clearCSV()">Clear</button>
+          </div>
+          <div class="csv-preview card" id="csv-preview-list"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('csv-modal')">Cancel</button>
+        <button class="btn btn-primary" id="csv-import-btn" onclick="importCSVQuiz()" disabled>Import Quiz</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ SHARE MODAL ══════ -->
+  <div id="share-modal" class="modal-overlay" style="display:none;" onclick="closeOnBackdrop(event,'share-modal')">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Share Quiz</h3>
+        <button class="btn btn-ghost btn-icon" onclick="closeModal('share-modal')">✕</button>
+      </div>
+      <div class="modal-body stack stack-2">
+        <p>Share this link with anyone to let them take your quiz. No account required!</p>
+        <div class="form-group">
+          <label class="form-label">Public Quiz Link</label>
+          <div class="copy-box">
+            <input type="text" id="share-link" readonly />
+            <button id="copy-btn" onclick="copyShareLink()">Copy Link</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="closeModal('share-modal')">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+  <script src="supabase.js"></script>
+  <script>
+    let currentUser = null;
+    let csvParsedQuestions = [];
+    let questionCount = 0;
+
+    // ── INIT ──────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', async () => {
+      currentUser = await requireAuth();
+      if (!currentUser) return;
+
+      document.getElementById('user-email').textContent = currentUser.email;
+      await loadQuizzes();
+      setupDragDrop();
+    });
+
+    async function handleLogout() {
+      await signOut();
+      window.location.href = 'login.html';
+    }
+
+    // ── LOAD QUIZZES ─────────────────────────────────────────
+    async function loadQuizzes() {
+      const grid = document.getElementById('quiz-grid');
+      const { data: quizzes, error } = await getUserQuizzes(currentUser.id);
+      if (error) { showAlert('dash-alert', error.message); return; }
+
+      if (!quizzes || quizzes.length === 0) {
+        grid.innerHTML = `
+          <div class="empty-state" style="grid-column:1/-1;">
+            <div class="empty-icon">📝</div>
+            <h3>No quizzes yet</h3>
+            <p>Create your first quiz to get started!</p>
+            <button class="btn btn-primary" style="margin-top:1rem;" onclick="openCreateModal()">+ Create Quiz</button>
+          </div>`;
+        return;
+      }
+
+      grid.innerHTML = quizzes.map(q => `
+        <div class="card card-hover animate-in" style="display:flex;flex-direction:column;">
+          <div class="card-body" style="flex:1;">
+            <div class="quiz-card-meta">
+              <span class="badge badge-accent">⏱ ${q.timer_seconds > 0 ? q.timer_seconds + 's' : 'No timer'}</span>
+              <span class="badge badge-muted">${formatDate(q.created_at)}</span>
+            </div>
+            <h3 style="margin-bottom:0.4rem;">${escapeHtml(q.title)}</h3>
+            <p style="font-size:0.875rem;margin-bottom:1rem;">${escapeHtml(q.description || 'No description.')}</p>
+          </div>
+          <div class="card-footer" style="flex-wrap:wrap;gap:0.5rem;">
+            <button class="btn btn-secondary btn-sm" onclick="openShareModal('${q.id}')">🔗 Share</button>
+            <a href="analytics.html?quiz=${q.id}" class="btn btn-ghost btn-sm">📈 Analytics</a>
+            <button class="btn btn-danger btn-sm" onclick="confirmDelete('${q.id}','${escapeHtml(q.title)}')">🗑 Delete</button>
+          </div>
+        </div>`).join('');
+    }
+
+    // ── CREATE QUIZ MODAL ──────────────────────────────────
+    function openCreateModal() {
+      questionCount = 0;
+      document.getElementById('quiz-title').value = '';
+      document.getElementById('quiz-desc').value = '';
+      document.getElementById('quiz-timer').value = '30';
+      document.getElementById('questions-container').innerHTML = '';
+      document.getElementById('modal-alert').innerHTML = '';
+      openModal('create-modal');
+      addQuestion(); // Add first question by default
+    }
+
+    function addQuestion() {
+      questionCount++;
+      const qNum = questionCount;
+      const container = document.getElementById('questions-container');
+      const block = document.createElement('div');
+      block.className = 'question-block';
+      block.id = `q-block-${qNum}`;
+      block.innerHTML = `
+        <div class="question-block-header">
+          <span class="badge badge-accent">Question ${qNum}</span>
+          <button class="btn btn-danger btn-sm btn-icon" onclick="removeQuestion(${qNum})" title="Remove question">✕</button>
+        </div>
+        <div class="form-group" style="margin-bottom:0.75rem;">
+          <label class="form-label">Question Text *</label>
+          <input class="form-input q-text" id="q-text-${qNum}" placeholder="Enter your question here…" />
+        </div>
+        <label class="form-label">Options (select correct answer)</label>
+        <div class="options-grid">
+          ${['A','B','C','D'].map(l => `
+            <div class="option-item">
+              <div class="option-letter">${l}</div>
+              <input class="form-input q-opt-${l.toLowerCase()}" id="q-${qNum}-opt-${l}" placeholder="Option ${l}…" style="margin:0;" />
+              <input type="radio" name="q-correct-${qNum}" value="${l}" id="q-${qNum}-correct-${l}" title="Mark as correct" />
+              <label for="q-${qNum}-correct-${l}" style="font-size:0.75rem;color:var(--text-muted);cursor:pointer;" title="Correct answer">✓</label>
+            </div>`).join('')}
+        </div>`;
+      container.appendChild(block);
+      block.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+
+    function removeQuestion(num) {
+      const block = document.getElementById(`q-block-${num}`);
+      if (block) block.remove();
+    }
+
+    async function saveQuiz() {
+      const btn = document.getElementById('save-quiz-btn');
+      const title = document.getElementById('quiz-title').value.trim();
+      const desc = document.getElementById('quiz-desc').value.trim();
+      const timer = parseInt(document.getElementById('quiz-timer').value) || 0;
+
+      if (!title) { showAlert('modal-alert', 'Quiz title is required.'); return; }
+
+      // Collect questions
+      const blocks = document.querySelectorAll('.question-block');
+      if (blocks.length === 0) { showAlert('modal-alert', 'Add at least one question.'); return; }
+
+      const questions = [];
+      for (const block of blocks) {
+        const id = block.id.split('-').pop();
+        const text = document.getElementById(`q-text-${id}`)?.value.trim();
+        const optA = document.getElementById(`q-${id}-opt-A`)?.value.trim();
+        const optB = document.getElementById(`q-${id}-opt-B`)?.value.trim();
+        const optC = document.getElementById(`q-${id}-opt-C`)?.value.trim();
+        const optD = document.getElementById(`q-${id}-opt-D`)?.value.trim();
+        const correctEl = document.querySelector(`input[name="q-correct-${id}"]:checked`);
+
+        if (!text || !optA || !optB || !optC || !optD) {
+          showAlert('modal-alert', `Please fill all fields in Question block.`);
+          return;
+        }
+        if (!correctEl) {
+          showAlert('modal-alert', `Please select a correct answer for each question.`);
+          return;
+        }
+        questions.push({ question_text: text, option_a: optA, option_b: optB, option_c: optC, option_d: optD, correct_option: correctEl.value });
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Saving…';
+
+      const { data: quiz, error } = await createQuiz(currentUser.id, title, desc, timer);
+      if (error) {
+        showAlert('modal-alert', error.message);
+        btn.disabled = false; btn.textContent = 'Save & Publish Quiz';
+        return;
+      }
+
+      const qWithQuizId = questions.map(q => ({ ...q, quiz_id: quiz.id }));
+      const { error: qError } = await insertQuestions(qWithQuizId);
+      if (qError) {
+        showAlert('modal-alert', 'Quiz saved but questions failed: ' + qError.message);
+      } else {
+        closeModal('create-modal');
+        await loadQuizzes();
+        showToast('Quiz created successfully! 🎉');
+      }
+      btn.disabled = false; btn.textContent = 'Save & Publish Quiz';
+    }
+
+    // ── CSV IMPORT ────────────────────────────────────────
+    function openCSVModal() {
+      csvParsedQuestions = [];
+      document.getElementById('csv-file').value = '';
+      document.getElementById('csv-preview-section').style.display = 'none';
+      document.getElementById('csv-import-btn').disabled = true;
+      document.getElementById('csv-alert').innerHTML = '';
+      openModal('csv-modal');
+    }
+
+    function handleCSVFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => processCSV(e.target.result);
+      reader.readAsText(file);
+    }
+
+    function setupDragDrop() {
+      const zone = document.getElementById('upload-zone');
+      if (!zone) return;
+      zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+      zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+      zone.addEventListener('drop', e => {
+        e.preventDefault(); zone.classList.remove('drag-over');
+        const file = e.dataTransfer.files[0];
+        if (file && file.name.endsWith('.csv')) {
+          const reader = new FileReader();
+          reader.onload = (ev) => processCSV(ev.target.result);
+          reader.readAsText(file);
+        } else { showAlert('csv-alert', 'Please drop a .csv file.', 'error'); }
+      });
+    }
+
+    function processCSV(text) {
+      const { questions, errors } = parseCSV(text);
+      csvParsedQuestions = questions;
+
+      const alertEl = document.getElementById('csv-alert');
+      const preview = document.getElementById('csv-preview-section');
+      const list = document.getElementById('csv-preview-list');
+      const count = document.getElementById('csv-preview-count');
+
+      alertEl.innerHTML = '';
+      if (errors.length > 0) {
+        alertEl.innerHTML = `<div class="alert alert-error">⚠ ${errors.length} error(s) found:<br/>${errors.map(e => `• ${e}`).join('<br/>')}</div>`;
+      }
+
+      if (questions.length === 0) {
+        document.getElementById('csv-import-btn').disabled = true;
+        preview.style.display = 'none';
+        return;
+      }
+
+      count.textContent = `${questions.length} question${questions.length !== 1 ? 's' : ''} parsed`;
+      list.innerHTML = questions.map((q, i) => `
+        <div class="csv-row">
+          <span class="csv-q-num">${i + 1}.</span>
+          <div>
+            <strong style="font-size:0.875rem;color:var(--text-primary);">${escapeHtml(q.question_text)}</strong>
+            <div style="margin-top:0.25rem;font-size:0.78rem;color:var(--text-secondary);">
+              A: ${escapeHtml(q.option_a)} &nbsp;|&nbsp; B: ${escapeHtml(q.option_b)} &nbsp;|&nbsp; C: ${escapeHtml(q.option_c)} &nbsp;|&nbsp; D: ${escapeHtml(q.option_d)}
+              &nbsp;— <strong style="color:var(--success);">Correct: ${q.correct_option}</strong>
+            </div>
+          </div>
+        </div>`).join('');
+
+      preview.style.display = '';
+      document.getElementById('csv-import-btn').disabled = false;
+    }
+
+    function clearCSV() {
+      csvParsedQuestions = [];
+      document.getElementById('csv-file').value = '';
+      document.getElementById('csv-preview-section').style.display = 'none';
+      document.getElementById('csv-import-btn').disabled = true;
+    }
+
+    async function importCSVQuiz() {
+      const title = document.getElementById('csv-quiz-title').value.trim();
+      if (!title) { showAlert('csv-alert', 'Please enter a quiz title.', 'error'); return; }
+      if (csvParsedQuestions.length === 0) { showAlert('csv-alert', 'No valid questions to import.', 'error'); return; }
+
+      const btn = document.getElementById('csv-import-btn');
+      btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Importing…';
+
+      const desc = document.getElementById('csv-quiz-desc').value.trim();
+      const timer = parseInt(document.getElementById('csv-quiz-timer').value) || 0;
+
+      const { data: quiz, error } = await createQuiz(currentUser.id, title, desc, timer);
+      if (error) { showAlert('csv-alert', error.message, 'error'); btn.disabled = false; btn.textContent = 'Import Quiz'; return; }
+
+      const qWithQuizId = csvParsedQuestions.map(q => ({ ...q, quiz_id: quiz.id }));
+      const { error: qError } = await insertQuestions(qWithQuizId);
+      if (qError) { showAlert('csv-alert', qError.message, 'error'); }
+      else {
+        closeModal('csv-modal');
+        await loadQuizzes();
+        showToast(`Imported ${csvParsedQuestions.length} questions! 🎉`);
+      }
+      btn.disabled = false; btn.textContent = 'Import Quiz';
+    }
+
+    // ── SHARE ─────────────────────────────────────────────
+    function openShareModal(quizId) {
+      const link = `${location.origin}/${location.pathname.split('/').slice(0,-1).join('/')}/quiz.html?id=${quizId}`;
+      document.getElementById('share-link').value = link;
+      openModal('share-modal');
+    }
+
+    function copyShareLink() {
+      const link = document.getElementById('share-link').value;
+      const btn = document.getElementById('copy-btn');
+      copyToClipboard(link, btn);
+    }
+
+    // ── DELETE ────────────────────────────────────────────
+    async function confirmDelete(quizId, title) {
+      if (!confirm(`Delete "${title}"? This will also delete all responses. This cannot be undone.`)) return;
+      const { error } = await deleteQuiz(quizId);
+      if (error) showToast('Delete failed: ' + error.message, 'error');
+      else { await loadQuizzes(); showToast('Quiz deleted.'); }
+    }
+
+    // ── MODAL HELPERS ─────────────────────────────────────
+    function openModal(id) { document.getElementById(id).style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; document.body.style.overflow = ''; }
+    function closeOnBackdrop(e, id) { if (e.target.id === id) closeModal(id); }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+  </script>
+</body>
+</html>

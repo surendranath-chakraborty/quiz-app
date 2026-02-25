@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QuizForge — Advanced Quiz Builder</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Supabase CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <!-- ── NAVBAR ── -->
+  <nav class="navbar">
+    <div class="logo">Quiz<span>Forge</span></div>
+    <div class="navbar-links">
+      <div class="theme-toggle">
+        <label for="theme-toggle-main">🌙</label>
+        <label class="toggle-switch">
+          <input type="checkbox" id="theme-toggle-main" class="dark-toggle-input" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <a href="login.html" class="btn btn-ghost btn-sm">Login</a>
+      <a href="login.html" class="btn btn-primary btn-sm">Get Started Free</a>
+    </div>
+  </nav>
+
+  <!-- ── HERO ── -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-eyebrow animate-in">✦ No-code quiz creation platform</div>
+      <h1 class="animate-in animate-delay-1">
+        Build, Share & Analyze<br />Quizzes in Minutes
+      </h1>
+      <p class="animate-in animate-delay-2">
+        Create stunning quizzes with timers, import questions via CSV,
+        share with a single link, and gain deep insights through analytics.
+      </p>
+      <div class="hero-actions animate-in animate-delay-3">
+        <a href="login.html" class="btn btn-primary btn-lg">Start Building Free →</a>
+        <a href="#features" class="btn btn-ghost btn-lg">See Features</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FEATURES ── -->
+  <section class="features" id="features">
+    <div class="container">
+      <div style="text-align:center;margin-bottom:3rem;">
+        <h2>Everything you need to quiz smarter</h2>
+        <p style="max-width:480px;margin:0.75rem auto 0;">A complete toolkit for educators, trainers, and businesses — all in one place.</p>
+      </div>
+      <div class="grid-3">
+        <div class="card feature-card card-hover animate-in">
+          <div class="feature-icon">⚡</div>
+          <h4>Instant Quiz Builder</h4>
+          <p>Add unlimited questions with 4 options each. Set per-question timers. Save and publish instantly.</p>
+        </div>
+        <div class="card feature-card card-hover animate-in animate-delay-1">
+          <div class="feature-icon">📊</div>
+          <h4>CSV Bulk Import</h4>
+          <p>Upload a spreadsheet, preview all questions, validate data, and create a full quiz in seconds.</p>
+        </div>
+        <div class="card feature-card card-hover animate-in animate-delay-2">
+          <div class="feature-icon">🔗</div>
+          <h4>One-click Sharing</h4>
+          <p>Generate a unique public link. Share anywhere. Respondents need no account to take a quiz.</p>
+        </div>
+        <div class="card feature-card card-hover animate-in animate-delay-1">
+          <div class="feature-icon">⏱</div>
+          <h4>Timed Questions</h4>
+          <p>Set countdown timers per question. Auto-advance keeps quizzes engaging and fair.</p>
+        </div>
+        <div class="card feature-card card-hover animate-in animate-delay-2">
+          <div class="feature-icon">📈</div>
+          <h4>Analytics Dashboard</h4>
+          <p>Track total attempts, average scores, highest scores, and full response history per quiz.</p>
+        </div>
+        <div class="card feature-card card-hover animate-in animate-delay-3">
+          <div class="feature-icon">🌙</div>
+          <h4>Dark Mode</h4>
+          <p>Beautiful light and dark themes. Your preference is saved automatically across sessions.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── CTA ── -->
+  <section style="padding:6rem 0;text-align:center;">
+    <div class="container">
+      <h2>Ready to create your first quiz?</h2>
+      <p style="margin:1rem auto 2rem;max-width:400px;">Join thousands of educators and trainers who use QuizForge every day.</p>
+      <a href="login.html" class="btn btn-primary btn-lg">Create Free Account →</a>
+    </div>
+  </section>
+
+  <!-- ── FOOTER ── -->
+  <footer style="border-top:1px solid var(--border);padding:2rem;text-align:center;">
+    <p style="font-size:0.85rem;color:var(--text-muted);">© 2025 QuizForge. Built with Supabase.</p>
+  </footer>
+
+  <script src="script.js"></script>
+  <script src="supabase.js"></script>
+  <script>
+    // Redirect to dashboard if already logged in
+    (async () => {
+      const user = await getCurrentUser();
+      if (user) {
+        const link = document.querySelector('a[href="login.html"].btn-primary');
+        if (link) { link.href = 'dashboard.html'; link.textContent = 'Go to Dashboard →'; }
+      }
+    })();
+  </script>
+</body>
+</html>

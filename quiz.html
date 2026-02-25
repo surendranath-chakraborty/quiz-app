@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quiz — QuizForge</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div class="quiz-player">
+    <!-- Loading state -->
+    <div id="quiz-loading" class="loading-overlay">
+      <div class="spinner" style="width:36px;height:36px;border-width:4px;"></div>
+      <p style="color:var(--text-secondary);">Loading quiz…</p>
+    </div>
+
+    <!-- Error state -->
+    <div id="quiz-error" style="display:none;" class="flex-center" style="min-height:100vh;">
+      <div style="text-align:center;padding:3rem;">
+        <div style="font-size:3rem;margin-bottom:1rem;">😕</div>
+        <h2>Quiz not found</h2>
+        <p style="margin:0.5rem 0 1.5rem;">This quiz link may be invalid or expired.</p>
+        <a href="index.html" class="btn btn-primary">← Back to Home</a>
+      </div>
+    </div>
+
+    <!-- Quiz header -->
+    <div id="quiz-header" class="quiz-player-header" style="display:none;">
+      <div class="theme-toggle" style="margin-right:auto;">
+        <label class="toggle-switch">
+          <input type="checkbox" class="dark-toggle-input" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div class="flex-between" style="margin-bottom:0.35rem;">
+          <span id="question-counter" style="font-size:0.8rem;font-weight:600;color:var(--text-secondary);"></span>
+          <span id="quiz-title-header" style="font-size:0.8rem;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;"></span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progress-fill" style="width:0%;"></div>
+        </div>
+      </div>
+      <!-- Timer -->
+      <div class="timer-circle" id="timer-wrap">
+        <svg viewBox="0 0 58 58" width="64" height="64">
+          <circle class="timer-bg" cx="29" cy="29" r="26"/>
+          <circle class="timer-fill" id="timer-fill" cx="29" cy="29" r="26"/>
+        </svg>
+        <div class="timer-text" id="timer-text"></div>
+      </div>
+    </div>
+
+    <!-- Question area -->
+    <div id="quiz-content" style="display:none;flex:1;">
+      <div class="quiz-question-card">
+        <div class="question-number" id="q-number"></div>
+        <div class="question-text" id="q-text"></div>
+        <div class="quiz-options" id="quiz-options"></div>
+      </div>
+      <div class="quiz-nav">
+        <button class="btn btn-primary" id="next-btn" onclick="nextQuestion()">Next →</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+  <script src="supabase.js"></script>
+  <script>
+    // ── STATE ────────────────────────────────────────────────
+    let quiz = null;
+    let questions = [];
+    let currentIndex = 0;
+    let answers = []; // Array of selected option strings (A/B/C/D) or null
+    let timerInterval = null;
+    let timeLeft = 0;
+    const CIRCUMFERENCE = 2 * Math.PI * 26; // ~163.36
+
+    // ── INIT ─────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', async () => {
+      const params = new URLSearchParams(location.search);
+      const quizId = params.get('id');
+
+      if (!quizId) { showError(); return; }
+
+      const { data: quizData, error: qErr } = await getQuiz(quizId);
+      if (qErr || !quizData) { showError(); return; }
+
+      const { data: qs, error: qsErr } = await getQuizQuestions(quizId);
+      if (qsErr || !qs || qs.length === 0) { showError('No questions found for this quiz.'); return; }
+
+      quiz = quizData;
+      questions = qs;
+      answers = new Array(questions.length).fill(null);
+
+      document.title = quiz.title + ' — QuizForge';
+      document.getElementById('quiz-title-header').textContent = quiz.title;
+
+      document.getElementById('quiz-loading').style.display = 'none';
+      document.getElementById('quiz-header').style.display = 'flex';
+      document.getElementById('quiz-content').style.display = 'block';
+
+      renderQuestion(0);
+    });
+
+    function showError(msg) {
+      document.getElementById('quiz-loading').style.display = 'none';
+      const errEl = document.getElementById('quiz-error');
+      errEl.style.display = 'flex';
+      errEl.style.minHeight = '100vh';
+      errEl.style.alignItems = 'center';
+      errEl.style.justifyContent = 'center';
+      if (msg) errEl.querySelector('p').textContent = msg;
+    }
+
+    // ── RENDER QUESTION ─────────────────────────────────────
+    function renderQuestion(index) {
+      const q = questions[index];
+      const total = questions.length;
+
+      // Progress
+      document.getElementById('question-counter').textContent = `${index + 1} / ${total}`;
+      const pct = ((index) / total) * 100;
+      document.getElementById('progress-fill').style.width = pct + '%';
+
+      // Text
+      document.getElementById('q-number').textContent = `Question ${index + 1}`;
+      document.getElementById('q-text').textContent = q.question_text;
+
+      // Options
+      const optionsEl = document.getElementById('quiz-options');
+      const opts = [
+        { key: 'A', text: q.option_a },
+        { key: 'B', text: q.option_b },
+        { key: 'C', text: q.option_c },
+        { key: 'D', text: q.option_d },
+      ];
+      optionsEl.innerHTML = opts.map(o => `
+        <button class="quiz-option ${answers[index] === o.key ? 'selected' : ''}"
+          onclick="selectAnswer('${o.key}')" id="opt-${o.key}" ${answers[index] !== null ? 'disabled' : ''}>
+          <span class="option-indicator">${o.key}</span>
+          <span>${escapeHtml(o.text)}</span>
+        </button>`).join('');
+
+      // Next button label
+      const nextBtn = document.getElementById('next-btn');
+      nextBtn.textContent = index === total - 1 ? 'Submit Quiz ✓' : 'Next →';
+
+      // Timer
+      clearTimer();
+      if (quiz.timer_seconds > 0) {
+        document.getElementById('timer-wrap').style.visibility = 'visible';
+        startTimer(quiz.timer_seconds);
+      } else {
+        document.getElementById('timer-wrap').style.visibility = 'hidden';
+      }
+    }
+
+    // ── SELECT ANSWER ────────────────────────────────────────
+    function selectAnswer(optionKey) {
+      if (answers[currentIndex] !== null) return; // Already answered
+
+      answers[currentIndex] = optionKey;
+      const q = questions[currentIndex];
+
+      // Visual feedback
+      ['A', 'B', 'C', 'D'].forEach(k => {
+        const btn = document.getElementById('opt-' + k);
+        if (!btn) return;
+        btn.disabled = true;
+        if (k === q.correct_option) btn.classList.add('correct');
+        else if (k === optionKey) btn.classList.add('wrong');
+      });
+    }
+
+    // ── NEXT / SUBMIT ─────────────────────────────────────────
+    function nextQuestion() {
+      clearTimer();
+      if (currentIndex < questions.length - 1) {
+        currentIndex++;
+        renderQuestion(currentIndex);
+      } else {
+        submitQuiz();
+      }
+    }
+
+    async function submitQuiz() {
+      // Calculate score
+      let score = 0;
+      questions.forEach((q, i) => {
+        if (answers[i] === q.correct_option) score++;
+      });
+      const percentage = Math.round((score / questions.length) * 100);
+
+      // Save response to Supabase
+      await saveResponse(quiz.id, score, questions.length, percentage);
+
+      // Redirect to results
+      const params = new URLSearchParams({
+        score, total: questions.length, percentage, title: quiz.title,
+        answers: JSON.stringify(answers),
+        correct: JSON.stringify(questions.map(q => q.correct_option))
+      });
+      window.location.href = `result.html?${params.toString()}`;
+    }
+
+    // ── TIMER ────────────────────────────────────────────────
+    function startTimer(seconds) {
+      timeLeft = seconds;
+      updateTimerUI(seconds, seconds);
+
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        updateTimerUI(timeLeft, seconds);
+        if (timeLeft <= 0) {
+          clearTimer();
+          autoAdvance();
+        }
+      }, 1000);
+    }
+
+    function updateTimerUI(remaining, total) {
+      const el = document.getElementById('timer-text');
+      const fill = document.getElementById('timer-fill');
+      if (el) el.textContent = remaining;
+      if (fill) {
+        const offset = CIRCUMFERENCE * (1 - remaining / total);
+        fill.style.strokeDashoffset = offset;
+        // Change color when running low
+        if (remaining <= 5) fill.style.stroke = 'var(--danger)';
+        else if (remaining <= total * 0.33) fill.style.stroke = 'var(--warning)';
+        else fill.style.stroke = 'var(--accent)';
+      }
+    }
+
+    function clearTimer() {
+      if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+    }
+
+    function autoAdvance() {
+      // If no answer selected, mark as null (already null)
+      nextQuestion();
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+  </script>
+</body>
+</html>
