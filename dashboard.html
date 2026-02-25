@@ -442,7 +442,7 @@
 
     // ── SHARE ─────────────────────────────────────────────
     function openShareModal(quizId) {
-      const link = `${location.origin}/${location.pathname.split('/').slice(0,-1).join('/')}/quiz.html?id=${quizId}`;
+      const link = `https://quizeworld.netlify.app/quiz.html?id=${quizId}`;
       document.getElementById('share-link').value = link;
       openModal('share-modal');
     }
