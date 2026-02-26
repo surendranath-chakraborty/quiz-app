@@ -431,95 +431,91 @@
         // ✅ OTP is correct — mark used
         await db.collection('email_otps').doc(otpEmail).update({ used: true });
 
-        // ── SIGN IN STRATEGY ──────────────────────────────────────
-        // We store a password in Firestore for OTP users so it is
-        // always consistent across devices and sessions
+        // ── SIGN IN / CREATE ACCOUNT ─────────────────────────────
+        // Strategy: always delete old stored password if sign-in fails
+        // so we never get stuck with a wrong password
         // ─────────────────────────────────────────────────────────
 
-        // Check if password already stored for this email
+        let signedIn = false;
+
+        // 1. Check if we have a stored password for this email
         const passDoc = await db.collection('otp_passwords').doc(otpEmail).get();
-        let storedPass;
 
         if (passDoc.exists) {
-          // Use existing stored password
-          storedPass = passDoc.data().password;
-        } else {
-          // First time — generate and store a new password
-          storedPass = 'QF' + Math.random().toString(36).slice(2,10) +
-                       Math.random().toString(36).slice(2,10) + 'Zz9!';
-          await db.collection('otp_passwords').doc(otpEmail).set({
-            password: storedPass,
-            email:    otpEmail,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-          });
-        }
-
-        // Now try to sign in with stored password
-        try {
-          await auth.signInWithEmailAndPassword(otpEmail, storedPass);
-
-        } catch(signInErr) {
-          if (signInErr.code === 'auth/user-not-found') {
-            // New user — create account with stored password
-            const newUser = await auth.createUserWithEmailAndPassword(otpEmail, storedPass);
-            const uid     = newUser.user.uid;
-            const uname   = otpEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g,'');
-            const uDoc    = await db.collection('users').doc(uid).get();
-            if (!uDoc.exists) {
-              await db.collection('users').doc(uid).set({
-                uid, firstName:'', lastName:'', fullName:'',
-                username: uname, email: otpEmail, phone:'',
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-              });
-            }
-          } else {
-            // Wrong password for existing account
-            // Update password using Firebase updatePassword after re-auth
-            // Since we can't re-auth, delete and recreate
-            const methods = await auth.fetchSignInMethodsForEmail(otpEmail);
-            if (methods.length > 0) {
-              // Account exists — update password via password reset silently
-              // Generate fresh password and store it
-              storedPass = 'QF' + Math.random().toString(36).slice(2,10) +
-                           Math.random().toString(36).slice(2,10) + 'Zz9!';
-              await db.collection('otp_passwords').doc(otpEmail).set({
-                password: storedPass, email: otpEmail,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-              });
-              // Send password reset email
-              await auth.sendPasswordResetEmail(otpEmail);
-              clearTimers();
-              showAlert('auth-alert',
-                '✅ OTP verified! A <strong>password reset link</strong> was sent to <strong>' + otpEmail + '</strong>. ' +
-                'Click it and set any password, then come back and use <strong>Email OTP</strong> to login — it will work immediately!',
-                'success');
-              btn.disabled = false; btn.textContent = 'Verify & Login';
-              return;
-            }
+          const storedPass = passDoc.data().password;
+          try {
+            await auth.signInWithEmailAndPassword(otpEmail, storedPass);
+            signedIn = true;
+          } catch(e) {
+            // Stored password is wrong — delete it and start fresh
+            await db.collection('otp_passwords').doc(otpEmail).delete();
+            signedIn = false;
           }
         }
 
+        if (!signedIn) {
+          // Generate a brand new password
+          const newPass = 'QF_' + Date.now() + '_' +
+                          Math.random().toString(36).slice(2,12) + '_Zz!';
+
+          // Check if account exists
+          const methods = await auth.fetchSignInMethodsForEmail(otpEmail);
+
+          if (methods.length === 0) {
+            // No account — create one
+            const cred = await auth.createUserWithEmailAndPassword(otpEmail, newPass);
+            const uid  = cred.user.uid;
+            const uname = otpEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g,'');
+            await db.collection('users').doc(uid).set({
+              uid, firstName:'', lastName:'', fullName:'',
+              username: uname, email: otpEmail, phone:'',
+              createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+          } else {
+            // Account exists with different password — update it
+            // We do this by creating a temp account won't work,
+            // so we use confirmPasswordReset flow is not available client-side
+            // BEST APPROACH: use Firebase Admin via a small Cloud Function
+            // WORKAROUND for now: send password reset email
+            clearTimers();
+            showAlert('auth-alert',
+              '✅ OTP verified!<br><br>' +
+              'Your email <strong>' + otpEmail + '</strong> already has a password-based account.<br><br>' +
+              'Please <strong>check your inbox</strong> — we sent a password reset link. ' +
+              'After resetting, you can log in with either password or OTP.',
+              'success');
+            await auth.sendPasswordResetEmail(otpEmail);
+            btn.disabled = false;
+            btn.textContent = 'Verify & Login';
+            return;
+          }
+
+          // Save the new password for next time
+          await db.collection('otp_passwords').doc(otpEmail).set({
+            password: newPass, email: otpEmail,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          signedIn = true;
+        }
+
         // ✅ Successfully signed in
+        if (!auth.currentUser) {
+          showAlert('auth-alert', 'Login error — please try again.', 'error');
+          btn.disabled = false; btn.textContent = 'Verify & Login';
+          return;
+        }
+
         clearTimers();
+        localStorage.setItem('qf_uid',   auth.currentUser.uid);
+        localStorage.setItem('qf_email', auth.currentUser.email || otpEmail);
         showAlert('auth-alert', '✓ OTP verified! Redirecting…', 'success');
 
-        // Store a flag so dashboard knows login just happened
-        const loggedInUser = auth.currentUser;
-        localStorage.setItem('qf_uid', loggedInUser.uid);
-        localStorage.setItem('qf_email', loggedInUser.email || otpEmail);
-
-        // Wait for onAuthStateChanged to confirm session is saved
         await new Promise(resolve => {
           let done = false;
-          const unsub = auth.onAuthStateChanged(user => {
-            if (user && !done) {
-              done = true;
-              unsub();
-              resolve();
-            }
+          auth.onAuthStateChanged(user => {
+            if (user && !done) { done = true; resolve(); }
           });
-          // Hard fallback after 5 seconds
-          setTimeout(() => { if(!done){ done=true; resolve(); } }, 5000);
+          setTimeout(() => { if (!done) { done = true; resolve(); } }, 4000);
         });
 
         window.location.replace('dashboard.html');
