@@ -89,11 +89,18 @@ async function createQuiz(userId, title, description, timerSeconds) {
 
 async function getUserQuizzes(userId) {
   try {
+    // No orderBy here to avoid needing a composite index
+    // We sort client-side instead
     const snap = await db.collection('quizzes')
       .where('user_id', '==', userId)
-      .orderBy('created_at', 'desc')
       .get();
-    const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const data = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => {
+        const ta = a.created_at ? a.created_at.toMillis() : 0;
+        const tb = b.created_at ? b.created_at.toMillis() : 0;
+        return tb - ta; // newest first
+      });
     return { data, error: null };
   } catch (e) {
     return { data: [], error: e };
