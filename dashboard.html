@@ -168,9 +168,20 @@
     let csvParsedQuestions = [];
     let questionCount = 0;
 
-    document.addEventListener('DOMContentLoaded', async () => {
-      currentUser = await requireAuth();
-      if (!currentUser) return;
+    document.addEventListener('DOMContentLoaded', () => {
+      // Use onAuthStateChanged so we wait for Firebase to fully restore session
+      // This prevents redirect loop when coming from OTP login
+      auth.onAuthStateChanged(async user => {
+        if (!user) {
+          // Not logged in — but wait 2 seconds first in case session is still loading
+          setTimeout(() => {
+            if (!auth.currentUser) {
+              window.location.href = 'login.html';
+            }
+          }, 2000);
+          return;
+        }
+        currentUser = user;
       // Load user profile from Firestore to show name
       const userDoc = await db.collection('users').doc(currentUser.uid).get();
       if (userDoc.exists) {
@@ -186,6 +197,7 @@
       }
       await loadQuizzes();
       setupDragDrop();
+      }); // end onAuthStateChanged
     });
 
     async function handleLogout() {

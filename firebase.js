@@ -24,9 +24,18 @@ const db = firebase.firestore();
 
 function getCurrentUser() {
   return new Promise((resolve) => {
+    // Wait up to 5 seconds for Firebase to restore session
+    let resolved = false;
+    const timeout = setTimeout(() => {
+      if (!resolved) { resolved = true; resolve(null); }
+    }, 5000);
     const unsubscribe = auth.onAuthStateChanged(user => {
-      unsubscribe();
-      resolve(user);
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(timeout);
+        unsubscribe();
+        resolve(user);
+      }
     });
   });
 }

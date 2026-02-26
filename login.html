@@ -274,10 +274,13 @@
 
   <script>
     // ── Check if already logged in ─────────────────
-    (async () => {
-      const user = await getCurrentUser();
-      if (user) window.location.href = 'dashboard.html';
-    })();
+    // Wait for Firebase to fully restore auth state before checking
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        // Already logged in - go to dashboard
+        window.location.href = 'dashboard.html';
+      }
+    });
 
     // ── OTP state ──────────────────────────────────
     let generatedOTP    = '';
@@ -496,10 +499,18 @@
           }
         }
 
-        // ✅ Successfully signed in
+        // ✅ Successfully signed in — wait for Firebase to persist session
         clearTimers();
         showAlert('auth-alert', '✓ OTP verified! Redirecting…', 'success');
-        setTimeout(() => window.location.href = 'dashboard.html', 800);
+        // Use onAuthStateChanged to redirect only when session is confirmed
+        const unsubscribe = auth.onAuthStateChanged(user => {
+          if (user) {
+            unsubscribe();
+            window.location.href = 'dashboard.html';
+          }
+        });
+        // Fallback redirect after 3 seconds
+        setTimeout(() => window.location.href = 'dashboard.html', 3000);
 
       } catch(e) {
         console.error('OTP verify error:', e);
