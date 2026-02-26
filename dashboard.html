@@ -10,6 +10,8 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
   <script src="firebase.js"></script>
   <script src="script.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+  <script>emailjs.init("67KS-UpkK_MZAvNjK");</script>
 </head>
 <body>
   <style>
@@ -522,11 +524,46 @@
       document.getElementById('user-dropdown').style.display = 'none';
       const email = currentUser.email;
       if (!email) { showToast('No email found for this account.', 'error'); return; }
+
+      showToast('Sending reset email…');
+
+      // Generate a reset OTP and save to Firestore
+      const resetOTP  = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 mins
+
       try {
-        await auth.sendPasswordResetEmail(email);
-        showToast('✓ Password reset email sent to ' + email);
+        // Save reset OTP to Firestore
+        await db.collection('email_otps').doc(email).set({
+          otp:       resetOTP,
+          email:     email,
+          expiresAt: firebase.firestore.Timestamp.fromDate(expiresAt),
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          used:      false,
+          type:      'password_reset'
+        });
+
+        // Try Firebase built-in reset first
+        try {
+          await auth.sendPasswordResetEmail(email);
+          showToast('✓ Password reset email sent to ' + email + '. Check inbox & spam!');
+          return;
+        } catch(firebaseErr) {
+          console.log('Firebase reset failed, using EmailJS:', firebaseErr.code);
+        }
+
+        // Fallback: send via EmailJS with the OTP
+        await emailjs.send('quizforge_service', 'quizforge_otp', {
+          to_email: email,
+          email:    email,
+          otp:      resetOTP,
+          subject:  'QuizForge Password Reset OTP'
+        });
+
+        showToast('✓ Password reset OTP sent to ' + email + '. Use it on login page!');
+
       } catch(e) {
-        showToast('Failed to send reset email.', 'error');
+        console.error('Reset email error:', e);
+        showToast('Failed to send reset email: ' + e.message, 'error');
       }
     }
 

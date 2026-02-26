@@ -782,19 +782,60 @@
       const btn   = document.getElementById('forgot-btn');
       const email = document.getElementById('forgot-email').value.trim();
       if (!email) { showAlert('auth-alert','Please enter your email.','error'); return; }
+
       btn.disabled = true;
       btn.innerHTML = '<span class="spinner"></span> Sending…';
+
+      // Generate a reset OTP
+      const resetOTP  = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 mins
+
       try {
-        await auth.sendPasswordResetEmail(email);
-        showAlert('auth-alert','✓ Reset email sent! Check your inbox and spam folder.','success');
+        // Save reset OTP to Firestore
+        await db.collection('email_otps').doc(email).set({
+          otp:       resetOTP,
+          email:     email,
+          expiresAt: firebase.firestore.Timestamp.fromDate(expiresAt),
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          used:      false,
+          type:      'password_reset'
+        });
+
+        // Try Firebase built-in reset first
+        let firebaseSent = false;
+        try {
+          await auth.sendPasswordResetEmail(email);
+          firebaseSent = true;
+        } catch(firebaseErr) {
+          console.log('Firebase reset failed:', firebaseErr.code);
+        }
+
+        if (firebaseSent) {
+          showAlert('auth-alert',
+            '✓ Password reset email sent to <strong>' + email + '</strong>.<br>Check your inbox and spam folder!',
+            'success');
+        } else {
+          // Fallback: send OTP via EmailJS
+          await emailjs.send('quizforge_service', 'quizforge_otp', {
+            to_email: email,
+            email:    email,
+            otp:      resetOTP
+          });
+          showAlert('auth-alert',
+            '✓ A 6-digit reset OTP was sent to <strong>' + email + '</strong>.<br>' +
+            'Go to <strong>📧 Email OTP</strong> tab and enter it to login, then change your password.',
+            'success');
+        }
+
         btn.textContent = '✓ Email Sent!';
-        setTimeout(() => switchTab('login'), 3000);
+        setTimeout(() => switchTab('login'), 4000);
+
       } catch(e) {
-        let msg = 'Failed to send reset email.';
-        if (e.code === 'auth/user-not-found') msg = 'No account found with this email.';
-        if (e.code === 'auth/invalid-email')  msg = 'Please enter a valid email.';
+        let msg = 'Failed to send reset email. Please try again.';
+        if (e.code === 'auth/invalid-email') msg = 'Please enter a valid email.';
         showAlert('auth-alert', msg, 'error');
-        btn.disabled = false; btn.textContent = 'Send Reset Email';
+        btn.disabled = false;
+        btn.textContent = 'Send Reset Email';
       }
     }
   </script>
