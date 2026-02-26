@@ -499,18 +499,19 @@
           }
         }
 
-        // ✅ Successfully signed in — wait for Firebase to persist session
+        // ✅ Successfully signed in
         clearTimers();
         showAlert('auth-alert', '✓ OTP verified! Redirecting…', 'success');
-        // Use onAuthStateChanged to redirect only when session is confirmed
-        const unsubscribe = auth.onAuthStateChanged(user => {
-          if (user) {
-            unsubscribe();
-            window.location.href = 'dashboard.html';
-          }
+
+        // Wait for auth state to fully persist before navigating
+        // This prevents the redirect loop
+        await new Promise(resolve => {
+          const unsub = auth.onAuthStateChanged(user => {
+            if (user) { unsub(); resolve(); }
+          });
+          setTimeout(resolve, 4000); // max wait 4 seconds
         });
-        // Fallback redirect after 3 seconds
-        setTimeout(() => window.location.href = 'dashboard.html', 3000);
+        window.location.replace('dashboard.html');
 
       } catch(e) {
         console.error('OTP verify error:', e);

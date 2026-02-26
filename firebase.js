@@ -16,7 +16,12 @@ const firebaseConfig = {
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
-const db = firebase.firestore();
+const db   = firebase.firestore();
+
+// CRITICAL: Set LOCAL persistence so session survives page navigation
+// Without this, Firebase loses the session when moving between pages
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+  .catch(e => console.log('Persistence error:', e));
 
 // ─────────────────────────────────────────
 // AUTH HELPERS

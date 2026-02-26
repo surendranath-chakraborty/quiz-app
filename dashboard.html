@@ -169,16 +169,10 @@
     let questionCount = 0;
 
     document.addEventListener('DOMContentLoaded', () => {
-      // Use onAuthStateChanged so we wait for Firebase to fully restore session
-      // This prevents redirect loop when coming from OTP login
+      // Wait for Firebase to restore session — critical for OTP login
       auth.onAuthStateChanged(async user => {
         if (!user) {
-          // Not logged in — but wait 2 seconds first in case session is still loading
-          setTimeout(() => {
-            if (!auth.currentUser) {
-              window.location.href = 'login.html';
-            }
-          }, 2000);
+          window.location.href = 'login.html';
           return;
         }
         currentUser = user;
