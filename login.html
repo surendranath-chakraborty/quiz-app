@@ -247,40 +247,38 @@
   </div>
 
   <script>
+    // ── State — declared first so nothing references them before init ──
+    let generatedOTP    = '';
+    let otpEmail        = '';
+    let forgotEmail     = '';
+    let forgotOTP       = '';
+    let otpExpireTimer  = null;
+    let resendTimer     = null;
+    let fotpExpireTimer = null;
+    let fotpResendTimer = null;
+
     auth.onAuthStateChanged(user => { if (user) window.location.href = 'dashboard.html'; });
 
     // Auto-open forgot tab if redirected from dashboard with ?forgot=email
     (function() {
-      const params = new URLSearchParams(window.location.search);
-      const forgotEmail = params.get('forgot');
-      if (forgotEmail) {
-        // Pre-fill the email and open forgot tab
+      const params      = new URLSearchParams(window.location.search);
+      const forgotParam = params.get('forgot');
+      if (forgotParam) {
         switchTab('forgot');
-        document.getElementById('forgot-email').value = decodeURIComponent(forgotEmail);
+        forgotEmail = decodeURIComponent(forgotParam);
+        window._forgotEmailOverride = forgotEmail;
+        document.getElementById('forgot-email').value = forgotEmail;
         showAlert('auth-alert',
-          '✓ OTP sent to <strong>' + decodeURIComponent(forgotEmail) + '</strong>! Enter it below.',
+          '✓ OTP sent to <strong>' + forgotEmail + '</strong>! Enter it below.',
           'success');
-        // Jump straight to OTP step since OTP was already sent
         document.getElementById('forgot-step-1').style.display = 'none';
         document.getElementById('forgot-step-2').style.display = '';
-        document.getElementById('forgot-otp-sent-to').textContent = decodeURIComponent(forgotEmail);
-        // Store email for verification
-        window._forgotEmailOverride = decodeURIComponent(forgotEmail);
+        document.getElementById('forgot-otp-sent-to').textContent = forgotEmail;
         document.getElementById('fotp-0').focus();
         startFotpTimer();
         startFotpResend();
       }
     })();
-
-    // ── State ────────────────────────────────────
-    let generatedOTP   = '';
-    let otpEmail       = '';
-    let forgotEmail    = '';
-    let forgotOTP      = '';
-    let otpExpireTimer = null;
-    let resendTimer    = null;
-    let fotpExpireTimer= null;
-    let fotpResendTimer= null;
 
     // ── Eye toggle ───────────────────────────────
     function toggleEye(inputId, btn) {
