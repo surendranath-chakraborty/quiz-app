@@ -1,273 +1,226 @@
-# QuizForge — Advanced Quiz Builder
+# QuizForge — Smart Quiz Builder
 
-A complete, production-ready quiz creation and analytics platform built with HTML, CSS, Vanilla JavaScript, and Supabase.
+A complete, production-ready quiz creation and analytics platform.
+**Live at:** https://quizeworld.netlify.app
 
 ---
 
-## 📁 File Structure
+## Tech Stack
+
+- **Frontend**: HTML5, CSS3, Vanilla JavaScript
+- **Backend**: Firebase (Firestore + Auth) — asia-south1 Mumbai region
+- **Email**: EmailJS (free — sends OTP emails via Gmail)
+- **Charts**: Chart.js
+- **Hosting**: Netlify
+
+---
+
+## File Structure
 
 ```
 quiz-app/
-├── index.html        ← Landing page
-├── login.html        ← Auth page (Login + Sign Up)
-├── dashboard.html    ← Quiz creator dashboard (protected)
-├── quiz.html         ← Public quiz player
-├── result.html       ← Results page
-├── analytics.html    ← Admin analytics (protected)
-├── style.css         ← All styles (dark mode, responsive)
-├── script.js         ← Shared utilities & CSV parser
-├── supabase.js       ← Supabase client & all DB helpers
-└── README.md         ← This file
+├── index.html           ← Landing page
+├── login.html           ← Login / Sign Up / OTP / Forgot Password
+├── dashboard.html       ← Quiz creator (protected)
+├── quiz.html            ← Public quiz player
+├── result.html          ← Results + review page
+├── analytics.html       ← Analytics (protected)
+├── style.css            ← All styles + dark mode
+├── script.js            ← Shared utilities
+├── firebase.js          ← Firebase config + all DB helpers
+├── firestore.rules      ← Firestore security rules
+├── PROJECT_CONTEXT.txt  ← AI context file (share with AI to modify project)
+└── README.md            ← This file
 ```
 
 ---
 
-## 🚀 Setup Instructions
+## Firebase Setup
 
-### Step 1 — Create a Supabase Project
+### Step 1 — Create Firebase Project
+1. Go to console.firebase.google.com
+2. Click Add Project → name it → create
+3. Register a Web App → copy the config object
 
-1. Go to [https://supabase.com](https://supabase.com) and sign up / log in.
-2. Click **"New Project"**, give it a name, choose a region, set a database password.
-3. Wait ~1–2 minutes for the project to provision.
+### Step 2 — Enable Authentication
+1. Firebase Console → Authentication → Sign-in method
+2. Enable: Email/Password (both toggles ON including Email link)
+3. Enable: Google
+4. Add Authorized domains: quizeworld.netlify.app, localhost
 
----
+### Step 3 — Create Firestore Database
+1. Firebase Console → Firestore Database → Create database
+2. Choose asia-south1 (Mumbai) region
+3. Start in test mode
 
-### Step 2 — Run the SQL Schema
+### Step 4 — Set Firestore Rules
+Go to Firestore → Rules tab → paste:
 
-1. In your Supabase dashboard, click **"SQL Editor"** in the left sidebar.
-2. Click **"New Query"** and paste the entire SQL below, then click **"Run"**.
-
-```sql
--- ============================================
--- QuizForge Database Schema
--- ============================================
-
--- Enable UUID generation
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-
--- ── QUIZZES TABLE ──
-CREATE TABLE IF NOT EXISTS quizzes (
-  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id         UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  title           TEXT NOT NULL,
-  description     TEXT DEFAULT '',
-  timer_seconds   INTEGER DEFAULT 0,
-  created_at      TIMESTAMPTZ DEFAULT NOW()
-);
-
--- ── QUESTIONS TABLE ──
-CREATE TABLE IF NOT EXISTS questions (
-  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  quiz_id         UUID NOT NULL REFERENCES quizzes(id) ON DELETE CASCADE,
-  question_text   TEXT NOT NULL,
-  option_a        TEXT NOT NULL,
-  option_b        TEXT NOT NULL,
-  option_c        TEXT NOT NULL,
-  option_d        TEXT NOT NULL,
-  correct_option  TEXT NOT NULL CHECK (correct_option IN ('A','B','C','D')),
-  created_at      TIMESTAMPTZ DEFAULT NOW()
-);
-
--- ── RESPONSES TABLE ──
-CREATE TABLE IF NOT EXISTS responses (
-  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  quiz_id          UUID NOT NULL REFERENCES quizzes(id) ON DELETE CASCADE,
-  score            INTEGER NOT NULL DEFAULT 0,
-  total_questions  INTEGER NOT NULL DEFAULT 0,
-  percentage       FLOAT NOT NULL DEFAULT 0,
-  created_at       TIMESTAMPTZ DEFAULT NOW()
-);
-
--- ── ROW LEVEL SECURITY ──
-ALTER TABLE quizzes   ENABLE ROW LEVEL SECURITY;
-ALTER TABLE questions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE responses ENABLE ROW LEVEL SECURITY;
-
--- Quizzes: owners can do anything; everyone can read (for public quiz player)
-CREATE POLICY "Owner full access on quizzes"
-  ON quizzes FOR ALL
-  USING (auth.uid() = user_id);
-
-CREATE POLICY "Anyone can read quizzes"
-  ON quizzes FOR SELECT
-  USING (true);
-
--- Questions: owner can manage; anyone can read (quiz player needs to read them)
-CREATE POLICY "Owner full access on questions"
-  ON questions FOR ALL
-  USING (
-    auth.uid() = (SELECT user_id FROM quizzes WHERE id = questions.quiz_id)
-  );
-
-CREATE POLICY "Anyone can read questions"
-  ON questions FOR SELECT
-  USING (true);
-
--- Responses: anyone can insert (quiz player); only owner can read their quiz responses
-CREATE POLICY "Anyone can insert responses"
-  ON responses FOR INSERT
-  WITH CHECK (true);
-
-CREATE POLICY "Owner can read responses"
-  ON responses FOR SELECT
-  USING (
-    auth.uid() = (SELECT user_id FROM quizzes WHERE id = responses.quiz_id)
-  );
-
--- ── INDEXES for performance ──
-CREATE INDEX IF NOT EXISTS idx_quizzes_user_id   ON quizzes(user_id);
-CREATE INDEX IF NOT EXISTS idx_questions_quiz_id ON questions(quiz_id);
-CREATE INDEX IF NOT EXISTS idx_responses_quiz_id ON responses(quiz_id);
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    match /email_otps/{email} {
+      allow read, write: if true;
+    }
+    match /otp_passwords/{email} {
+      allow read, write: if true;
+    }
+    match /quizzes/{quizId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    match /questions/{questionId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    match /responses/{responseId} {
+      allow read, write: if true;
+    }
+  }
+}
 ```
 
 ---
 
-### Step 3 — Get Your API Keys
+## EmailJS Setup
 
-1. In Supabase, go to **Project Settings → API**.
-2. Copy:
-   - **Project URL** (looks like `https://xxxx.supabase.co`)
-   - **anon / public key** (a long JWT string)
-
----
-
-### Step 4 — Update `supabase.js`
-
-Open `supabase.js` and replace the placeholder values:
-
-```js
-const SUPABASE_URL = 'https://YOUR_PROJECT_ID.supabase.co';  // ← Replace this
-const SUPABASE_ANON_KEY = 'YOUR_ANON_PUBLIC_KEY';            // ← Replace this
-```
+1. Sign up at emailjs.com
+2. Add Gmail as a service (Service ID: quizforge_service)
+3. Create a template (Template ID: quizforge_otp) with:
+   - To Email: {{to_email}}
+   - Subject: Your QuizForge OTP: {{otp}}
+   - Body: Your OTP is: {{otp}} — expires in 10 minutes.
+4. Copy your Public Key from Account page
+5. Update login.html and dashboard.html: emailjs.init("YOUR_PUBLIC_KEY")
 
 ---
 
-### Step 5 — Configure Auth (Email Confirmation)
-
-In Supabase dashboard:
-- Go to **Authentication → Providers → Email**
-- For development/testing: turn **off** "Confirm email" so users can log in immediately after signup
-- For production: leave it on and configure your email templates
-
----
-
-## 📊 CSV Import Format
-
-Create a `.csv` file with this exact header row:
+## CSV Import Format
 
 ```csv
 Question,Option A,Option B,Option C,Option D,Correct Option
 What is 2+2?,3,4,5,6,B
 What color is the sky?,Red,Green,Blue,Yellow,C
-Who wrote Hamlet?,Dickens,Shakespeare,Tolkien,Hemingway,B
 ```
-
-**Rules:**
-- Row 1 must be the header (it's skipped during import)
-- `Correct Option` must be: `A`, `B`, `C`, or `D` (case-insensitive; `Option A` also works)
-- Wrap fields containing commas in double quotes: `"Hello, World"`
-- Empty rows are skipped automatically
 
 ---
 
-## 🌐 Deployment
+## Deploy
 
-### Option A — Netlify (Recommended, Free)
-
-1. Go to [https://netlify.com](https://netlify.com) and sign up.
-2. Drag and drop your entire `quiz-app/` folder onto the Netlify dashboard.
-3. That's it — you get a live URL instantly!
-
-**Or via Netlify CLI:**
 ```bash
-npm install -g netlify-cli
-cd quiz-app
+git add .
+git commit -m "your message"
+git push
 netlify deploy --prod --dir=.
 ```
 
 ---
 
-### Option B — Vercel
-
-1. Go to [https://vercel.com](https://vercel.com) and sign up.
-2. Install Vercel CLI: `npm i -g vercel`
-3. Run in your project folder:
-```bash
-cd quiz-app
-vercel --prod
-```
-4. Follow the prompts — select "Other" as framework, set output directory to `.`
-
-**Or push to GitHub and import the repo on vercel.com.**
-
----
-
-### Option C — GitHub Pages
-
-1. Push all files to a GitHub repo.
-2. Go to **Settings → Pages**.
-3. Set source to `main` branch, root folder `/`.
-4. Your app will be live at `https://yourusername.github.io/repo-name/`
-
----
-
-## 🔒 Security Notes
-
-- **RLS (Row Level Security)** is enabled on all tables — users can only manage their own quizzes.
-- The public quiz player can read any quiz by ID (by design — it's meant to be shareable).
-- Anyone can submit responses (by design — quiz takers don't need accounts).
-- The **anon key** is safe to expose in frontend code — Supabase's RLS policies enforce security.
-- Never expose your **service_role** key in frontend code.
-
----
-
-## ✨ Features Summary
+## Features
 
 | Feature | Status |
 |---|---|
-| Email Auth (Sign Up / Login / Logout) | ✅ |
-| Protected Dashboard | ✅ |
-| Quiz Creator with Dynamic Questions | ✅ |
-| Per-Question Timers with SVG countdown | ✅ |
-| CSV Import with Preview & Validation | ✅ |
-| Drag & Drop CSV Upload | ✅ |
-| Public Quiz Player | ✅ |
-| Progress Bar | ✅ |
-| Auto-advance on Timer Expiry | ✅ |
-| Score Calculation | ✅ |
-| Results Page with Review | ✅ |
-| Save Responses to Supabase | ✅ |
-| Analytics Dashboard | ✅ |
-| Chart.js Score Distribution | ✅ |
-| Response History Table | ✅ |
-| One-click Share Link | ✅ |
-| Copy to Clipboard | ✅ |
-| Dark Mode with localStorage persistence | ✅ |
-| Fully Responsive (mobile-first) | ✅ |
-| Smooth animations & transitions | ✅ |
+| Email + Password Login | YES |
+| Google OAuth Login | YES |
+| Email OTP Login (passwordless) | YES |
+| Sign Up with personal details (name, username) | YES |
+| Username availability check (real-time) | YES |
+| Forgot Password via OTP email | YES |
+| Set New Password after OTP verify | YES |
+| User profile dropdown in navbar | YES |
+| Edit profile (name, username, phone) | YES |
+| Change password from dashboard | YES |
+| Password strength meter | YES |
+| Password eye toggle (show/hide) | YES |
+| Dark mode with persistence | YES |
+| Protected dashboard (auth required) | YES |
+| Create quiz (title, description, timer) | YES |
+| Add questions manually | YES |
+| CSV question import with preview | YES |
+| Drag and drop CSV upload | YES |
+| Delete quiz | YES |
+| Share quiz link (copy to clipboard) | YES |
+| Public quiz player (no login needed) | YES |
+| Per-question countdown timer | YES |
+| Auto-advance on timer expiry | YES |
+| Progress bar | YES |
+| Score calculation | YES |
+| Results page with answer review | YES |
+| Analytics dashboard | YES |
+| Score distribution chart (Chart.js) | YES |
+| Response history table | YES |
+| Mobile responsive | YES |
 
 ---
 
-## 🛠 Local Development
+## Authentication Flows
 
-No build step required! Just open the files in a browser:
+### Email OTP (passwordless)
+1. Enter email → OTP sent via EmailJS
+2. Enter 6-digit OTP → verified in Firestore
+3. Logged in (account auto-created if new)
 
-```bash
-# Using Python's built-in server (recommended to avoid CORS issues)
-cd quiz-app
-python3 -m http.server 8080
-# Open: http://localhost:8080
-```
+### Forgot Password
+1. Click "Forgot password?" → enter email
+2. OTP sent via EmailJS
+3. Enter OTP → verified
+4. Set new password screen appears
+5. Password updated → redirected to dashboard
 
-Or use the **Live Server** extension in VS Code.
+### Forgot Password from Dashboard
+1. Dropdown → Forgot Password
+2. OTP sent to your email
+3. Logged out → redirected to login page
+4. Forgot tab opens with email pre-filled and OTP step shown
+5. Enter OTP → set new password → done
 
 ---
 
-## 📝 Tech Stack
+## Firestore Collections
 
-- **Frontend**: HTML5, CSS3 (custom properties, grid, flexbox), Vanilla JS (ES2022+)
-- **Database**: Supabase (PostgreSQL)
-- **Auth**: Supabase Auth
-- **Charts**: Chart.js 4.x
-- **Fonts**: Google Fonts (Playfair Display + DM Sans + DM Mono)
-- **Deployment**: Netlify / Vercel / GitHub Pages
+| Collection | Purpose |
+|---|---|
+| users | User profiles (name, username, email, phone) |
+| quizzes | Quiz metadata |
+| questions | Quiz questions |
+| responses | Quiz attempt results |
+| email_otps | OTP codes for login and password reset |
+| otp_passwords | Auto-generated passwords for OTP accounts |
+
+---
+
+## Troubleshooting
+
+**OTP login redirects back to login page**
+- Check Firebase Auth authorized domains includes your Netlify URL
+- firebase.js must call auth.setPersistence(LOCAL) before sign-in
+
+**INVALID_LOGIN_CREDENTIALS error**
+- Delete the document from Firestore otp_passwords collection for your email
+- Delete your user from Firebase Auth → Users tab
+- Try again fresh
+
+**EmailJS email not arriving**
+- Check spam/junk folder
+- Go to EmailJS dashboard → test the service
+- Make sure template has {{to_email}} in the To field
+
+**Firestore rules error on save**
+- Paste ONLY the rules code, no surrounding text
+
+---
+
+## Modifying with AI
+
+Share PROJECT_CONTEXT.txt with any AI assistant. It contains everything
+needed to understand and modify this project correctly.
+
+Example prompt:
+"Here is my PROJECT_CONTEXT.txt for my QuizForge app.
+Please add a leaderboard to the quiz result page.
+Use Firebase v8 compat syntax and keep EmailJS config."
