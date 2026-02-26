@@ -239,8 +239,7 @@
                     placeholder="9876543210" maxlength="10" style="flex:1;" />
                 </div>
               </div>
-              <!-- reCAPTCHA renders here -->
-              <div id="recaptcha-container"></div>
+              <!-- reCAPTCHA is invisible — no box needed -->
               <button class="btn btn-primary" id="send-otp-btn" onclick="sendOTP()">Send OTP</button>
             </div>
           </div>
@@ -418,18 +417,18 @@
     function initRecaptcha() {
       // Only create once
       if (recaptchaVerifier) return;
-      recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
-        size: 'normal',
+      // Invisible recaptcha — works automatically without user interaction
+      recaptchaVerifier = new firebase.auth.RecaptchaVerifier('send-otp-btn', {
+        size: 'invisible',
         callback: () => {
-          // reCAPTCHA solved — enable send button
-          document.getElementById('send-otp-btn').disabled = false;
+          // reCAPTCHA passed automatically
         },
         'expired-callback': () => {
-          showAlert('auth-alert', 'reCAPTCHA expired. Please refresh.', 'error');
-          document.getElementById('send-otp-btn').disabled = true;
+          recaptchaVerifier.clear();
+          recaptchaVerifier = null;
+          initRecaptcha();
         }
       });
-      recaptchaVerifier.render();
     }
 
     async function sendOTP() {
@@ -462,10 +461,10 @@
         showAlert('auth-alert', msg, 'error');
         btn.disabled = false;
         btn.textContent = 'Send OTP';
-        // Reset recaptcha
-        recaptchaVerifier.clear();
-        recaptchaVerifier = null;
-        document.getElementById('recaptcha-container').innerHTML = '';
+        if (recaptchaVerifier) {
+          try { recaptchaVerifier.clear(); } catch(e) {}
+          recaptchaVerifier = null;
+        }
         initRecaptcha();
       }
     }
@@ -508,11 +507,9 @@
       document.getElementById('phone-step-1').style.display = '';
       document.getElementById('phone-step-2').style.display = 'none';
       clearInterval(resendTimer);
-      // Reset recaptcha
       if (recaptchaVerifier) {
         try { recaptchaVerifier.clear(); } catch(e) {}
         recaptchaVerifier = null;
-        document.getElementById('recaptcha-container').innerHTML = '';
       }
       initRecaptcha();
     }
