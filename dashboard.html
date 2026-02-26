@@ -12,6 +12,68 @@
   <script src="script.js"></script>
 </head>
 <body>
+  <style>
+    /* User profile dropdown */
+    .user-menu-wrap { position:relative; }
+    .user-avatar-btn {
+      display:flex; align-items:center; gap:0.5rem;
+      background:var(--bg-secondary); border:1.5px solid var(--border);
+      border-radius:99px; padding:0.35rem 0.75rem 0.35rem 0.35rem;
+      cursor:pointer; transition:all var(--transition);
+      font-family:var(--font-body); font-size:0.85rem;
+      color:var(--text-primary); font-weight:600;
+    }
+    .user-avatar-btn:hover { border-color:var(--accent); background:var(--bg-hover); }
+    .user-avatar {
+      width:30px; height:30px; border-radius:50%;
+      background:var(--accent); color:#fff;
+      display:flex; align-items:center; justify-content:center;
+      font-size:0.85rem; font-weight:700; flex-shrink:0;
+    }
+    .user-dropdown {
+      position:absolute; top:calc(100% + 8px); right:0;
+      background:var(--bg-secondary); border:1.5px solid var(--border);
+      border-radius:var(--radius); box-shadow:var(--shadow-lg);
+      min-width:260px; z-index:1000; overflow:hidden;
+      animation:dropIn 0.15s ease;
+    }
+    @keyframes dropIn {
+      from { opacity:0; transform:translateY(-8px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    .user-dropdown-header {
+      padding:1rem 1.25rem; border-bottom:1px solid var(--border);
+      background:var(--bg-input);
+    }
+    .user-dropdown-name {
+      font-weight:700; font-size:1rem; color:var(--text-primary);
+      margin-bottom:0.15rem;
+    }
+    .user-dropdown-email {
+      font-size:0.78rem; color:var(--text-muted);
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    }
+    .user-dropdown-username {
+      font-size:0.78rem; color:var(--accent); margin-top:0.1rem;
+    }
+    .dropdown-divider { height:1px; background:var(--border); margin:0.25rem 0; }
+    .dropdown-item {
+      display:flex; align-items:center; gap:0.65rem;
+      padding:0.7rem 1.25rem; cursor:pointer;
+      font-size:0.875rem; color:var(--text-primary);
+      transition:background var(--transition); width:100%;
+      background:none; border:none; font-family:var(--font-body);
+      text-align:left; text-decoration:none;
+    }
+    .dropdown-item:hover { background:var(--bg-hover); }
+    .dropdown-item.danger { color:var(--danger); }
+    .dropdown-item.danger:hover { background:rgba(220,53,69,0.08); }
+    .dropdown-item .item-icon { font-size:1rem; width:20px; text-align:center; }
+
+    /* Change password modal */
+    .modal-sm { max-width:440px !important; }
+  </style>
+
   <nav class="navbar">
     <a href="dashboard.html" class="logo">Quiz<span>Forge</span></a>
     <div class="navbar-links">
@@ -22,10 +84,120 @@
           <span class="toggle-slider"></span>
         </label>
       </div>
-      <span id="user-email" style="font-size:0.8rem;color:var(--text-muted);"></span>
-      <button class="btn btn-ghost btn-sm" onclick="handleLogout()">Logout</button>
+
+      <!-- User Profile Dropdown -->
+      <div class="user-menu-wrap" id="user-menu-wrap">
+        <button class="user-avatar-btn" onclick="toggleUserMenu()" id="user-avatar-btn">
+          <div class="user-avatar" id="user-avatar-initial">?</div>
+          <span id="user-display-name">Loading…</span>
+          <span style="font-size:0.7rem;color:var(--text-muted);">▼</span>
+        </button>
+
+        <div class="user-dropdown" id="user-dropdown" style="display:none;">
+          <!-- User info header -->
+          <div class="user-dropdown-header">
+            <div class="user-dropdown-name" id="dd-full-name">—</div>
+            <div class="user-dropdown-email" id="dd-email">—</div>
+            <div class="user-dropdown-username" id="dd-username"></div>
+          </div>
+
+          <!-- Menu items -->
+          <div style="padding:0.4rem 0;">
+            <button class="dropdown-item" onclick="openProfileModal()">
+              <span class="item-icon">👤</span> My Profile
+            </button>
+            <button class="dropdown-item" onclick="openChangePasswordModal()">
+              <span class="item-icon">🔑</span> Change Password
+            </button>
+            <button class="dropdown-item" onclick="sendForgotPassword()">
+              <span class="item-icon">📧</span> Forgot Password
+            </button>
+            <div class="dropdown-divider"></div>
+            <button class="dropdown-item danger" onclick="handleLogout()">
+              <span class="item-icon">🚪</span> Logout
+            </button>
+          </div>
+        </div>
+      </div>
+
     </div>
   </nav>
+
+  <!-- PROFILE MODAL -->
+  <div id="profile-modal" class="modal-overlay" style="display:none;"
+    onclick="closeOnBackdrop(event,'profile-modal')">
+    <div class="modal modal-sm" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>My Profile</h3>
+        <button class="btn btn-ghost btn-icon" onclick="closeModal('profile-modal')">✕</button>
+      </div>
+      <div class="modal-body stack stack-2">
+        <div id="profile-alert"></div>
+        <div style="text-align:center;margin-bottom:0.5rem;">
+          <div class="user-avatar" id="profile-avatar"
+            style="width:64px;height:64px;font-size:1.5rem;margin:0 auto 0.75rem;">?</div>
+        </div>
+        <div class="name-row" style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+          <div class="form-group">
+            <label class="form-label">First Name</label>
+            <input class="form-input" id="profile-firstname" type="text" placeholder="First name" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Last Name</label>
+            <input class="form-input" id="profile-lastname" type="text" placeholder="Last name" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Username</label>
+          <input class="form-input" id="profile-username" type="text" placeholder="username" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input class="form-input" id="profile-email" type="email" disabled
+            style="opacity:0.6;cursor:not-allowed;" />
+          <div class="form-hint">Email cannot be changed</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone</label>
+          <input class="form-input" id="profile-phone" type="tel" placeholder="+91 9876543210" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('profile-modal')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveProfile()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHANGE PASSWORD MODAL -->
+  <div id="change-pwd-modal" class="modal-overlay" style="display:none;"
+    onclick="closeOnBackdrop(event,'change-pwd-modal')">
+    <div class="modal modal-sm" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Change Password</h3>
+        <button class="btn btn-ghost btn-icon" onclick="closeModal('change-pwd-modal')">✕</button>
+      </div>
+      <div class="modal-body stack stack-2">
+        <div id="pwd-change-alert"></div>
+        <div class="form-group">
+          <label class="form-label">Current Password</label>
+          <input class="form-input" id="current-pwd" type="password" placeholder="Your current password" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">New Password</label>
+          <input class="form-input" id="new-pwd" type="password" placeholder="Min. 6 characters" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirm New Password</label>
+          <input class="form-input" id="confirm-new-pwd" type="password" placeholder="Repeat new password" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('change-pwd-modal')">Cancel</button>
+        <button class="btn btn-primary" onclick="changePassword()">Update Password</button>
+      </div>
+    </div>
+  </div>
 
   <main class="page">
     <div class="container">
@@ -210,24 +382,158 @@
           localStorage.removeItem('qf_email');
         }
       // Load user profile from Firestore to show name
-      const userDoc = await db.collection('users').doc(currentUser.uid).get();
-      if (userDoc.exists) {
-        const profile = userDoc.data();
-        const display = profile.firstName
-          ? `👋 Hi, ${profile.firstName}!`
-          : currentUser.email;
-        document.getElementById('user-email').textContent = display;
-      } else {
-        // Fallback: use display name or email
-        const name = currentUser.displayName || currentUser.email;
-        document.getElementById('user-email').textContent = '👋 Hi, ' + name.split(' ')[0] + '!';
-      }
+      await loadUserProfile();
       await loadQuizzes();
       setupDragDrop();
       }); // end onAuthStateChanged
     });
 
+    // ── USER PROFILE & DROPDOWN ─────────────────────────────
+    let userProfile = {};
+
+    async function loadUserProfile() {
+      const userDoc = await db.collection('users').doc(currentUser.uid).get();
+      if (userDoc.exists) {
+        userProfile = userDoc.data();
+      } else {
+        userProfile = {
+          firstName: currentUser.displayName?.split(' ')[0] || '',
+          lastName:  currentUser.displayName?.split(' ').slice(1).join(' ') || '',
+          fullName:  currentUser.displayName || '',
+          username:  '',
+          email:     currentUser.email || '',
+          phone:     ''
+        };
+      }
+      updateNavbarUI();
+    }
+
+    function updateNavbarUI() {
+      const first   = userProfile.firstName || '';
+      const initial = (first || userProfile.email || '?')[0].toUpperCase();
+      const display = first || currentUser.email?.split('@')[0] || 'User';
+
+      document.getElementById('user-avatar-initial').textContent = initial;
+      document.getElementById('user-display-name').textContent   = display;
+      document.getElementById('dd-full-name').textContent  = userProfile.fullName || display;
+      document.getElementById('dd-email').textContent      = userProfile.email || currentUser.email || '';
+      document.getElementById('dd-username').textContent   = userProfile.username ? '@' + userProfile.username : '';
+      document.getElementById('profile-avatar').textContent = initial;
+    }
+
+    function toggleUserMenu() {
+      const dd = document.getElementById('user-dropdown');
+      dd.style.display = dd.style.display === 'none' ? '' : 'none';
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      const wrap = document.getElementById('user-menu-wrap');
+      if (wrap && !wrap.contains(e.target)) {
+        document.getElementById('user-dropdown').style.display = 'none';
+      }
+    });
+
+    function openProfileModal() {
+      document.getElementById('user-dropdown').style.display = 'none';
+      document.getElementById('profile-firstname').value = userProfile.firstName || '';
+      document.getElementById('profile-lastname').value  = userProfile.lastName  || '';
+      document.getElementById('profile-username').value  = userProfile.username  || '';
+      document.getElementById('profile-email').value     = userProfile.email || currentUser.email || '';
+      document.getElementById('profile-phone').value     = userProfile.phone || '';
+      document.getElementById('profile-alert').innerHTML = '';
+      openModal('profile-modal');
+    }
+
+    async function saveProfile() {
+      const firstName = document.getElementById('profile-firstname').value.trim();
+      const lastName  = document.getElementById('profile-lastname').value.trim();
+      const username  = document.getElementById('profile-username').value.trim().toLowerCase();
+      const phone     = document.getElementById('profile-phone').value.trim();
+
+      if (!firstName) { showAlert('profile-alert','First name is required.','error'); return; }
+
+      // Check username not taken by someone else
+      if (username && username !== userProfile.username) {
+        const snap = await db.collection('users').where('username','==',username).get();
+        const taken = snap.docs.some(d => d.id !== currentUser.uid);
+        if (taken) { showAlert('profile-alert','Username already taken.','error'); return; }
+      }
+
+      try {
+        await db.collection('users').doc(currentUser.uid).set({
+          ...userProfile,
+          firstName, lastName,
+          fullName: firstName + ' ' + lastName,
+          username, phone,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        await auth.currentUser.updateProfile({ displayName: firstName + ' ' + lastName });
+
+        userProfile = { ...userProfile, firstName, lastName,
+          fullName: firstName + ' ' + lastName, username, phone };
+        updateNavbarUI();
+
+        showAlert('profile-alert','✓ Profile updated!','success');
+        setTimeout(() => closeModal('profile-modal'), 1200);
+      } catch(e) {
+        showAlert('profile-alert', 'Error: ' + e.message, 'error');
+      }
+    }
+
+    function openChangePasswordModal() {
+      document.getElementById('user-dropdown').style.display = 'none';
+      document.getElementById('current-pwd').value    = '';
+      document.getElementById('new-pwd').value        = '';
+      document.getElementById('confirm-new-pwd').value = '';
+      document.getElementById('pwd-change-alert').innerHTML = '';
+      openModal('change-pwd-modal');
+    }
+
+    async function changePassword() {
+      const currentPwd = document.getElementById('current-pwd').value;
+      const newPwd     = document.getElementById('new-pwd').value;
+      const confirmPwd = document.getElementById('confirm-new-pwd').value;
+
+      if (!currentPwd) { showAlert('pwd-change-alert','Enter your current password.','error'); return; }
+      if (newPwd.length < 6) { showAlert('pwd-change-alert','New password must be at least 6 characters.','error'); return; }
+      if (newPwd !== confirmPwd) { showAlert('pwd-change-alert','Passwords do not match.','error'); return; }
+
+      try {
+        // Re-authenticate first
+        const credential = firebase.auth.EmailAuthProvider.credential(
+          currentUser.email, currentPwd
+        );
+        await auth.currentUser.reauthenticateWithCredential(credential);
+        await auth.currentUser.updatePassword(newPwd);
+        showAlert('pwd-change-alert','✓ Password updated successfully!','success');
+        setTimeout(() => closeModal('change-pwd-modal'), 1500);
+      } catch(e) {
+        let msg = 'Failed to update password.';
+        if (e.code === 'auth/wrong-password')       msg = 'Current password is incorrect.';
+        if (e.code === 'auth/weak-password')         msg = 'New password is too weak.';
+        if (e.code === 'auth/requires-recent-login') msg = 'Please log out and log back in first.';
+        showAlert('pwd-change-alert', msg, 'error');
+      }
+    }
+
+    async function sendForgotPassword() {
+      document.getElementById('user-dropdown').style.display = 'none';
+      const email = currentUser.email;
+      if (!email) { showToast('No email found for this account.', 'error'); return; }
+      try {
+        await auth.sendPasswordResetEmail(email);
+        showToast('✓ Password reset email sent to ' + email);
+      } catch(e) {
+        showToast('Failed to send reset email.', 'error');
+      }
+    }
+
     async function handleLogout() {
+      document.getElementById('user-dropdown').style.display = 'none';
+      localStorage.removeItem('qf_uid');
+      localStorage.removeItem('qf_email');
       await signOut();
       window.location.href = 'login.html';
     }
