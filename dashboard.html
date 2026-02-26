@@ -74,6 +74,11 @@
 
     /* Change password modal */
     .modal-sm { max-width:440px !important; }
+    /* Eye toggle */
+    .pwd-wrap { position:relative; }
+    .pwd-wrap .form-input { padding-right:2.75rem; }
+    .eye-btn { position:absolute; right:.75rem; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:1.1rem; padding:0; line-height:1; transition:color var(--transition); }
+    .eye-btn:hover { color:var(--text-primary); }
   </style>
 
   <nav class="navbar">
@@ -183,15 +188,24 @@
         <div id="pwd-change-alert"></div>
         <div class="form-group">
           <label class="form-label">Current Password</label>
-          <input class="form-input" id="current-pwd" type="password" placeholder="Your current password" />
+          <div class="pwd-wrap">
+            <input class="form-input" id="current-pwd" type="password" placeholder="Your current password" />
+            <button class="eye-btn" type="button" onclick="toggleEye('current-pwd',this)">👁</button>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">New Password</label>
-          <input class="form-input" id="new-pwd" type="password" placeholder="Min. 6 characters" />
+          <div class="pwd-wrap">
+            <input class="form-input" id="new-pwd" type="password" placeholder="Min. 6 characters" />
+            <button class="eye-btn" type="button" onclick="toggleEye('new-pwd',this)">👁</button>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Confirm New Password</label>
-          <input class="form-input" id="confirm-new-pwd" type="password" placeholder="Repeat new password" />
+          <div class="pwd-wrap">
+            <input class="form-input" id="confirm-new-pwd" type="password" placeholder="Repeat new password" />
+            <button class="eye-btn" type="button" onclick="toggleEye('confirm-new-pwd',this)">👁</button>
+          </div>
         </div>
       </div>
       <div class="modal-footer">
@@ -389,6 +403,13 @@
       setupDragDrop();
       }); // end onAuthStateChanged
     });
+
+    // Eye toggle
+    function toggleEye(inputId, btn) {
+      const inp = document.getElementById(inputId);
+      if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
+      else { inp.type = 'password'; btn.textContent = '👁'; }
+    }
 
     // ── USER PROFILE & DROPDOWN ─────────────────────────────
     let userProfile = {};

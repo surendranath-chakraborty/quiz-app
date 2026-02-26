@@ -10,68 +10,41 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
   <script src="firebase.js"></script>
   <script src="script.js"></script>
-  <!-- EmailJS SDK for sending real emails -->
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-  <script>
-    // Initialize EmailJS with your Public Key
-    emailjs.init("67KS-UpkK_MZAvNjK");
-  </script>
+  <script>emailjs.init("67KS-UpkK_MZAvNjK");</script>
   <style>
-    .otp-boxes { display:flex; gap:0.5rem; justify-content:center; margin:0.5rem 0; }
-    .otp-box {
-      width:48px; height:56px; text-align:center;
-      font-size:1.5rem; font-weight:700;
-      font-family:var(--font-mono);
-      border:2px solid var(--border);
-      border-radius:var(--radius-sm);
-      background:var(--bg-input); color:var(--text-primary);
-      outline:none; transition:all var(--transition);
-    }
-    .otp-box:focus { border-color:var(--accent); background:var(--bg-secondary); box-shadow:0 0 0 3px rgba(232,93,38,0.15); }
-    .otp-box.filled { border-color:var(--success); background:var(--success-soft); }
-    .divider-text {
-      display:flex; align-items:center; gap:0.75rem;
-      color:var(--text-muted); font-size:0.8rem; margin:0.25rem 0;
-    }
-    .divider-text::before,.divider-text::after { content:''; flex:1; height:1px; background:var(--border); }
-    .btn-google {
-      background:var(--bg-secondary); color:var(--text-primary);
-      border:1.5px solid var(--border); width:100%;
-      display:flex; align-items:center; justify-content:center;
-      gap:0.6rem; font-size:0.9rem; padding:0.65rem 1rem;
-      border-radius:var(--radius-sm); cursor:pointer;
-      font-family:var(--font-body); font-weight:600;
-      transition:all var(--transition);
-    }
-    .btn-google:hover { background:var(--bg-hover); border-color:var(--border-strong); }
-    .auth-tabs-3 {
-      display:flex; background:var(--bg-input);
-      border-radius:var(--radius-sm); padding:4px;
-      margin-bottom:1.5rem; gap:3px;
-    }
-    .auth-tab-3 {
-      flex:1; padding:0.5rem 0.25rem; text-align:center;
-      border-radius:calc(var(--radius-sm) - 2px);
-      font-size:0.8rem; font-weight:600; cursor:pointer;
-      transition:all var(--transition); color:var(--text-muted);
-      border:none; background:transparent;
-      font-family:var(--font-body); white-space:nowrap;
-    }
-    .auth-tab-3.active { background:var(--bg-secondary); color:var(--text-primary); box-shadow:var(--shadow-sm); }
-    .name-row { display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; }
-    @media(max-width:480px){ .name-row { grid-template-columns:1fr; } }
-    .pwd-strength { height:4px; border-radius:99px; background:var(--border); margin-top:0.4rem; overflow:hidden; }
-    .pwd-strength-fill { height:100%; border-radius:99px; width:0%; transition:all 0.3s; }
-    .pwd-hint { font-size:0.75rem; margin-top:0.25rem; }
-    .email-otp-icon { font-size:3rem; text-align:center; margin-bottom:0.5rem; }
-    .otp-email-display {
-      background:var(--bg-input); border:1px solid var(--border);
-      border-radius:var(--radius-sm); padding:0.6rem 1rem;
-      font-family:var(--font-mono); font-size:0.85rem;
-      color:var(--accent); text-align:center; word-break:break-all;
-    }
-    .resend-area { font-size:0.8rem; color:var(--text-muted); text-align:center; margin-top:0.25rem; }
-    .resend-area a { color:var(--accent); cursor:pointer; font-weight:600; }
+    /* OTP boxes */
+    .otp-boxes{display:flex;gap:.5rem;justify-content:center;margin:.5rem 0}
+    .otp-box{width:48px;height:56px;text-align:center;font-size:1.5rem;font-weight:700;font-family:var(--font-mono);border:2px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);color:var(--text-primary);outline:none;transition:all var(--transition)}
+    .otp-box:focus{border-color:var(--accent);background:var(--bg-secondary);box-shadow:0 0 0 3px rgba(232,93,38,.15)}
+    .otp-box.filled{border-color:var(--success);background:var(--success-soft)}
+    /* Divider */
+    .divider-text{display:flex;align-items:center;gap:.75rem;color:var(--text-muted);font-size:.8rem;margin:.25rem 0}
+    .divider-text::before,.divider-text::after{content:"";flex:1;height:1px;background:var(--border)}
+    /* Google btn */
+    .btn-google{background:var(--bg-secondary);color:var(--text-primary);border:1.5px solid var(--border);width:100%;display:flex;align-items:center;justify-content:center;gap:.6rem;font-size:.9rem;padding:.65rem 1rem;border-radius:var(--radius-sm);cursor:pointer;font-family:var(--font-body);font-weight:600;transition:all var(--transition)}
+    .btn-google:hover{background:var(--bg-hover);border-color:var(--border-strong)}
+    /* Tabs */
+    .auth-tabs-3{display:flex;background:var(--bg-input);border-radius:var(--radius-sm);padding:4px;margin-bottom:1.5rem;gap:3px}
+    .auth-tab-3{flex:1;padding:.5rem .25rem;text-align:center;border-radius:calc(var(--radius-sm) - 2px);font-size:.8rem;font-weight:600;cursor:pointer;transition:all var(--transition);color:var(--text-muted);border:none;background:transparent;font-family:var(--font-body);white-space:nowrap}
+    .auth-tab-3.active{background:var(--bg-secondary);color:var(--text-primary);box-shadow:var(--shadow-sm)}
+    /* Name row */
+    .name-row{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+    @media(max-width:480px){.name-row{grid-template-columns:1fr}}
+    /* Password strength */
+    .pwd-strength{height:4px;border-radius:99px;background:var(--border);margin-top:.4rem;overflow:hidden}
+    .pwd-strength-fill{height:100%;border-radius:99px;width:0%;transition:all .3s}
+    .pwd-hint{font-size:.75rem;margin-top:.25rem}
+    /* Eye toggle */
+    .pwd-wrap{position:relative}
+    .pwd-wrap .form-input{padding-right:2.75rem}
+    .eye-btn{position:absolute;right:.75rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:1.1rem;padding:0;line-height:1;transition:color var(--transition)}
+    .eye-btn:hover{color:var(--text-primary)}
+    /* OTP email display */
+    .email-otp-icon{font-size:3rem;text-align:center;margin-bottom:.5rem}
+    .otp-email-display{background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.6rem 1rem;font-family:var(--font-mono);font-size:.85rem;color:var(--accent);text-align:center;word-break:break-all}
+    .resend-area{font-size:.8rem;color:var(--text-muted);text-align:center;margin-top:.25rem}
+    .resend-area a{color:var(--accent);cursor:pointer;font-weight:600}
   </style>
 </head>
 <body>
@@ -81,763 +54,616 @@
 
         <div class="auth-header">
           <div class="auth-logo">Quiz<span>Forge</span></div>
-          <p style="font-size:0.875rem;">Your smart quiz creation platform</p>
+          <p style="font-size:.875rem;">Your smart quiz creation platform</p>
         </div>
-
-        <!-- Dark mode toggle -->
         <div style="position:absolute;top:1.25rem;right:1.25rem;">
-          <label class="toggle-switch" title="Toggle dark mode">
-            <input type="checkbox" class="dark-toggle-input" />
-            <span class="toggle-slider"></span>
-          </label>
+          <label class="toggle-switch"><input type="checkbox" class="dark-toggle-input"/><span class="toggle-slider"></span></label>
         </div>
 
-        <!-- 3 Tabs -->
+        <!-- Tabs -->
         <div class="auth-tabs-3">
           <button class="auth-tab-3 active" id="tab-login"  onclick="switchTab('login')">🔑 Login</button>
           <button class="auth-tab-3"        id="tab-signup" onclick="switchTab('signup')">✨ Sign Up</button>
-          <button class="auth-tab-3"        id="tab-otp"    onclick="switchTab('otp')">📧 Email OTP</button>
+          <button class="auth-tab-3"        id="tab-otp"    onclick="switchTab('otp')">📧 OTP</button>
         </div>
 
         <div id="auth-alert"></div>
 
-        <!-- ══════════════════════════════
-             LOGIN FORM
-        ══════════════════════════════ -->
+        <!-- ═══ LOGIN ═══ -->
         <div id="login-form">
           <div class="stack stack-2">
             <div class="form-group">
               <label class="form-label">Email</label>
-              <input class="form-input" id="login-email" type="email" placeholder="you@example.com" />
+              <input class="form-input" id="login-email" type="email" placeholder="you@example.com"/>
             </div>
             <div class="form-group">
               <label class="form-label">Password</label>
-              <input class="form-input" id="login-password" type="password" placeholder="••••••••"
-                onkeydown="if(event.key==='Enter') handleLogin()" />
-              <div style="text-align:right;margin-top:0.3rem;">
-                <a href="#" onclick="switchTab('forgot')" style="font-size:0.8rem;color:var(--accent);">Forgot password?</a>
+              <div class="pwd-wrap">
+                <input class="form-input" id="login-password" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')handleLogin()"/>
+                <button class="eye-btn" type="button" onclick="toggleEye('login-password',this)">👁</button>
+              </div>
+              <div style="text-align:right;margin-top:.3rem;">
+                <a href="#" onclick="switchTab('forgot')" style="font-size:.8rem;color:var(--accent);">Forgot password?</a>
               </div>
             </div>
-            <button class="btn btn-primary" id="login-btn" onclick="handleLogin()">
-              Login to Dashboard
-            </button>
+            <button class="btn btn-primary" id="login-btn" onclick="handleLogin()">Login to Dashboard</button>
             <div class="divider-text">or</div>
-            <button class="btn-google" onclick="handleGoogleLogin()">
-              <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.29-8.16 2.29-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-              Continue with Google
-            </button>
-            <button class="btn btn-ghost" style="width:100%;justify-content:center;" onclick="switchTab('otp')">
-              📧 Login with Email OTP instead
-            </button>
+            <button class="btn-google" onclick="handleGoogleLogin()"><svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.29-8.16 2.29-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>Continue with Google</button>
+            <button class="btn btn-ghost" style="width:100%;justify-content:center;" onclick="switchTab('otp')">📧 Login with Email OTP</button>
           </div>
         </div>
 
-        <!-- ══════════════════════════════
-             SIGN UP FORM
-        ══════════════════════════════ -->
+        <!-- ═══ SIGN UP ═══ -->
         <div id="signup-form" style="display:none;">
           <div class="stack stack-2">
             <div class="name-row">
-              <div class="form-group">
-                <label class="form-label">First Name *</label>
-                <input class="form-input" id="signup-firstname" type="text" placeholder="Rahul" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Last Name *</label>
-                <input class="form-input" id="signup-lastname" type="text" placeholder="Sharma" />
-              </div>
+              <div class="form-group"><label class="form-label">First Name *</label><input class="form-input" id="signup-firstname" type="text" placeholder="Rahul"/></div>
+              <div class="form-group"><label class="form-label">Last Name *</label><input class="form-input" id="signup-lastname" type="text" placeholder="Sharma"/></div>
             </div>
             <div class="form-group">
               <label class="form-label">Username *</label>
-              <input class="form-input" id="signup-username" type="text"
-                placeholder="rahul123" oninput="checkUsername()" />
+              <input class="form-input" id="signup-username" type="text" placeholder="rahul123" oninput="checkUsername()"/>
               <div id="username-hint" class="form-hint"></div>
             </div>
-            <div class="form-group">
-              <label class="form-label">Email *</label>
-              <input class="form-input" id="signup-email" type="email" placeholder="you@example.com" />
-            </div>
+            <div class="form-group"><label class="form-label">Email *</label><input class="form-input" id="signup-email" type="email" placeholder="you@example.com"/></div>
             <div class="form-group">
               <label class="form-label">Password *</label>
-              <input class="form-input" id="signup-password" type="password"
-                placeholder="Min. 6 characters" oninput="checkPasswordStrength()" />
+              <div class="pwd-wrap">
+                <input class="form-input" id="signup-password" type="password" placeholder="Min. 6 characters" oninput="checkPasswordStrength()"/>
+                <button class="eye-btn" type="button" onclick="toggleEye('signup-password',this)">👁</button>
+              </div>
               <div class="pwd-strength"><div class="pwd-strength-fill" id="pwd-fill"></div></div>
               <div class="pwd-hint" id="pwd-hint"></div>
             </div>
             <div class="form-group">
               <label class="form-label">Confirm Password *</label>
-              <input class="form-input" id="signup-confirm" type="password" placeholder="Repeat password" />
+              <div class="pwd-wrap">
+                <input class="form-input" id="signup-confirm" type="password" placeholder="Repeat password"/>
+                <button class="eye-btn" type="button" onclick="toggleEye('signup-confirm',this)">👁</button>
+              </div>
             </div>
-            <button class="btn btn-primary" id="signup-btn" onclick="handleSignup()">
-              Create Free Account
-            </button>
+            <button class="btn btn-primary" id="signup-btn" onclick="handleSignup()">Create Free Account</button>
             <div class="divider-text">or</div>
-            <button class="btn-google" onclick="handleGoogleLogin()">
-              <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.29-8.16 2.29-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-              Sign up with Google
-            </button>
+            <button class="btn-google" onclick="handleGoogleLogin()"><svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.29-8.16 2.29-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>Sign up with Google</button>
           </div>
         </div>
 
-        <!-- ══════════════════════════════
-             FORGOT PASSWORD
-        ══════════════════════════════ -->
+        <!-- ═══ FORGOT PASSWORD (full flow with OTP) ═══ -->
         <div id="forgot-form" style="display:none;">
-          <div class="stack stack-2">
-            <div class="alert alert-info">📧 Enter your email and we will send a password reset link.</div>
-            <div class="form-group">
-              <label class="form-label">Your Email</label>
-              <input class="form-input" id="forgot-email" type="email" placeholder="you@example.com" />
-            </div>
-            <button class="btn btn-primary" id="forgot-btn" onclick="handleForgotPassword()">
-              Send Reset Email
-            </button>
-            <button class="btn btn-ghost" onclick="switchTab('login')">← Back to Login</button>
-          </div>
-        </div>
-
-        <!-- ══════════════════════════════
-             EMAIL OTP FORM
-        ══════════════════════════════ -->
-        <div id="otp-form" style="display:none;">
 
           <!-- Step 1: Enter email -->
-          <div id="otp-step-1">
+          <div id="forgot-step-1">
             <div class="stack stack-2">
-              <div class="email-otp-icon">📧</div>
-              <p style="text-align:center;font-size:0.9rem;margin:0;">
-                We will generate a <strong>6-digit OTP</strong> and send it to your email instantly.
-                No password needed!
-              </p>
+              <div class="alert alert-info">🔒 Enter your email. We will send a 6-digit OTP to reset your password.</div>
               <div class="form-group">
-                <label class="form-label">Your Email Address</label>
-                <input class="form-input" id="otp-email" type="email" placeholder="you@example.com"
-                  onkeydown="if(event.key==='Enter') sendEmailOTP()" />
+                <label class="form-label">Your Email</label>
+                <input class="form-input" id="forgot-email" type="email" placeholder="you@example.com"/>
               </div>
-              <button class="btn btn-primary" id="send-email-otp-btn" onclick="sendEmailOTP()">
-                Send OTP to Email
-              </button>
+              <button class="btn btn-primary" id="forgot-send-btn" onclick="sendForgotOTP()">Send Reset OTP</button>
               <button class="btn btn-ghost" onclick="switchTab('login')">← Back to Login</button>
             </div>
           </div>
 
           <!-- Step 2: Enter OTP -->
-          <div id="otp-step-2" style="display:none;">
+          <div id="forgot-step-2" style="display:none;">
             <div class="stack stack-2">
-              <div class="email-otp-icon">✉️</div>
+              <div class="email-otp-icon">🔒</div>
               <div style="text-align:center;">
-                <p style="font-size:0.875rem;margin:0 0 0.5rem;">OTP sent to:</p>
-                <div class="otp-email-display" id="otp-sent-to"></div>
+                <p style="font-size:.875rem;margin:0 0 .5rem;">OTP sent to:</p>
+                <div class="otp-email-display" id="forgot-otp-sent-to"></div>
               </div>
               <div class="form-group">
-                <label class="form-label" style="text-align:center;display:block;margin-bottom:0.75rem;">
-                  Enter 6-digit OTP
-                </label>
+                <label class="form-label" style="text-align:center;display:block;margin-bottom:.75rem;">Enter 6-digit OTP</label>
                 <div class="otp-boxes">
-                  <input class="otp-box" id="otp-0" maxlength="1" type="tel"
-                    oninput="otpInput(0)" onkeydown="otpKeydown(event,0)" />
-                  <input class="otp-box" id="otp-1" maxlength="1" type="tel"
-                    oninput="otpInput(1)" onkeydown="otpKeydown(event,1)" />
-                  <input class="otp-box" id="otp-2" maxlength="1" type="tel"
-                    oninput="otpInput(2)" onkeydown="otpKeydown(event,2)" />
-                  <input class="otp-box" id="otp-3" maxlength="1" type="tel"
-                    oninput="otpInput(3)" onkeydown="otpKeydown(event,3)" />
-                  <input class="otp-box" id="otp-4" maxlength="1" type="tel"
-                    oninput="otpInput(4)" onkeydown="otpKeydown(event,4)" />
-                  <input class="otp-box" id="otp-5" maxlength="1" type="tel"
-                    oninput="otpInput(5)" onkeydown="otpKeydown(event,5)" />
+                  <input class="otp-box" id="fotp-0" maxlength="1" type="tel" oninput="fotpInput(0)" onkeydown="fotpKeydown(event,0)"/>
+                  <input class="otp-box" id="fotp-1" maxlength="1" type="tel" oninput="fotpInput(1)" onkeydown="fotpKeydown(event,1)"/>
+                  <input class="otp-box" id="fotp-2" maxlength="1" type="tel" oninput="fotpInput(2)" onkeydown="fotpKeydown(event,2)"/>
+                  <input class="otp-box" id="fotp-3" maxlength="1" type="tel" oninput="fotpInput(3)" onkeydown="fotpKeydown(event,3)"/>
+                  <input class="otp-box" id="fotp-4" maxlength="1" type="tel" oninput="fotpInput(4)" onkeydown="fotpKeydown(event,4)"/>
+                  <input class="otp-box" id="fotp-5" maxlength="1" type="tel" oninput="fotpInput(5)" onkeydown="fotpKeydown(event,5)"/>
                 </div>
-                <p style="text-align:center;font-size:0.78rem;color:var(--text-muted);margin-top:0.5rem;">
-                  OTP expires in <span id="otp-expire-timer">10:00</span>
+                <p style="text-align:center;font-size:.78rem;color:var(--text-muted);margin-top:.5rem;">
+                  OTP expires in <span id="fotp-timer">10:00</span>
                 </p>
               </div>
-              <button class="btn btn-primary" id="verify-email-otp-btn" onclick="verifyEmailOTP()">
-                Verify &amp; Login
-              </button>
-              <div class="resend-area" id="resend-area">
-                Resend in <strong id="resend-count">30</strong>s
+              <button class="btn btn-primary" id="forgot-verify-btn" onclick="verifyForgotOTP()">Verify OTP</button>
+              <div class="resend-area" id="forgot-resend-area"></div>
+              <button class="btn btn-ghost btn-sm" onclick="backToForgotStep1()">← Change email</button>
+            </div>
+          </div>
+
+          <!-- Step 3: Set new password -->
+          <div id="forgot-step-3" style="display:none;">
+            <div class="stack stack-2">
+              <div class="alert alert-success">✓ OTP verified! Set your new password below.</div>
+              <div class="form-group">
+                <label class="form-label">New Password</label>
+                <div class="pwd-wrap">
+                  <input class="form-input" id="new-pwd-1" type="password" placeholder="Min. 6 characters" oninput="checkNewPwdStrength()"/>
+                  <button class="eye-btn" type="button" onclick="toggleEye('new-pwd-1',this)">👁</button>
+                </div>
+                <div class="pwd-strength"><div class="pwd-strength-fill" id="new-pwd-fill"></div></div>
+                <div class="pwd-hint" id="new-pwd-hint"></div>
               </div>
-              <button class="btn btn-ghost btn-sm" onclick="backToOTPStep1()">
-                ← Change email
-              </button>
+              <div class="form-group">
+                <label class="form-label">Confirm New Password</label>
+                <div class="pwd-wrap">
+                  <input class="form-input" id="new-pwd-2" type="password" placeholder="Repeat new password"/>
+                  <button class="eye-btn" type="button" onclick="toggleEye('new-pwd-2',this)">👁</button>
+                </div>
+              </div>
+              <button class="btn btn-primary" id="set-pwd-btn" onclick="setNewPassword()">Set New Password</button>
             </div>
           </div>
         </div>
 
-        <p style="text-align:center;font-size:0.8rem;margin-top:1.25rem;color:var(--text-muted);">
+        <!-- ═══ EMAIL OTP LOGIN ═══ -->
+        <div id="otp-form" style="display:none;">
+          <div id="otp-step-1">
+            <div class="stack stack-2">
+              <div class="email-otp-icon">📧</div>
+              <p style="text-align:center;font-size:.9rem;margin:0;">Enter your email — we will send a <strong>6-digit OTP</strong> instantly. No password needed!</p>
+              <div class="form-group">
+                <label class="form-label">Your Email Address</label>
+                <input class="form-input" id="otp-email" type="email" placeholder="you@example.com" onkeydown="if(event.key==='Enter')sendEmailOTP()"/>
+              </div>
+              <button class="btn btn-primary" id="send-email-otp-btn" onclick="sendEmailOTP()">Send OTP to Email</button>
+              <button class="btn btn-ghost" onclick="switchTab('login')">← Back to Login</button>
+            </div>
+          </div>
+          <div id="otp-step-2" style="display:none;">
+            <div class="stack stack-2">
+              <div class="email-otp-icon">✉️</div>
+              <div style="text-align:center;">
+                <p style="font-size:.875rem;margin:0 0 .5rem;">OTP sent to:</p>
+                <div class="otp-email-display" id="otp-sent-to"></div>
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="text-align:center;display:block;margin-bottom:.75rem;">Enter 6-digit OTP</label>
+                <div class="otp-boxes">
+                  <input class="otp-box" id="otp-0" maxlength="1" type="tel" oninput="otpInput(0)" onkeydown="otpKeydown(event,0)"/>
+                  <input class="otp-box" id="otp-1" maxlength="1" type="tel" oninput="otpInput(1)" onkeydown="otpKeydown(event,1)"/>
+                  <input class="otp-box" id="otp-2" maxlength="1" type="tel" oninput="otpInput(2)" onkeydown="otpKeydown(event,2)"/>
+                  <input class="otp-box" id="otp-3" maxlength="1" type="tel" oninput="otpInput(3)" onkeydown="otpKeydown(event,3)"/>
+                  <input class="otp-box" id="otp-4" maxlength="1" type="tel" oninput="otpInput(4)" onkeydown="otpKeydown(event,4)"/>
+                  <input class="otp-box" id="otp-5" maxlength="1" type="tel" oninput="otpInput(5)" onkeydown="otpKeydown(event,5)"/>
+                </div>
+                <p style="text-align:center;font-size:.78rem;color:var(--text-muted);margin-top:.5rem;">
+                  OTP expires in <span id="otp-expire-timer">10:00</span>
+                </p>
+              </div>
+              <button class="btn btn-primary" id="verify-email-otp-btn" onclick="verifyEmailOTP()">Verify &amp; Login</button>
+              <div class="resend-area" id="resend-area"></div>
+              <button class="btn btn-ghost btn-sm" onclick="backToOTPStep1()">← Change email</button>
+            </div>
+          </div>
+        </div>
+
+        <p style="text-align:center;font-size:.8rem;margin-top:1.25rem;color:var(--text-muted);">
           <a href="index.html">← Back to home</a>
         </p>
-
       </div>
     </div>
   </div>
 
   <script>
-    // ── Check if already logged in ─────────────────
-    // Wait for Firebase to fully restore auth state before checking
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        // Already logged in - go to dashboard
-        window.location.href = 'dashboard.html';
-      }
-    });
+    auth.onAuthStateChanged(user => { if (user) window.location.href = 'dashboard.html'; });
 
-    // ── OTP state ──────────────────────────────────
-    let generatedOTP    = '';
-    let otpEmail        = '';
-    let otpExpireTimer  = null;
-    let resendTimer     = null;
-    let otpExpireLeft   = 600; // 10 minutes in seconds
+    // ── State ────────────────────────────────────
+    let generatedOTP   = '';
+    let otpEmail       = '';
+    let forgotEmail    = '';
+    let forgotOTP      = '';
+    let otpExpireTimer = null;
+    let resendTimer    = null;
+    let fotpExpireTimer= null;
+    let fotpResendTimer= null;
 
-    // ══════════════════════════════════════════════
-    // TAB SWITCHER
-    // ══════════════════════════════════════════════
+    // ── Eye toggle ───────────────────────────────
+    function toggleEye(inputId, btn) {
+      const inp = document.getElementById(inputId);
+      if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
+      else { inp.type = 'password'; btn.textContent = '👁'; }
+    }
+
+    // ── Tab switch ───────────────────────────────
     function switchTab(tab) {
-      ['login-form','signup-form','forgot-form','otp-form'].forEach(id => {
-        document.getElementById(id).style.display = 'none';
-      });
+      ['login-form','signup-form','forgot-form','otp-form'].forEach(id =>
+        document.getElementById(id).style.display = 'none');
       ['tab-login','tab-signup','tab-otp'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.remove('active');
       });
       document.getElementById('auth-alert').innerHTML = '';
-
-      if (tab === 'login')  { document.getElementById('login-form').style.display  = ''; document.getElementById('tab-login').classList.add('active'); }
-      if (tab === 'signup') { document.getElementById('signup-form').style.display = ''; document.getElementById('tab-signup').classList.add('active'); }
-      if (tab === 'otp')    { document.getElementById('otp-form').style.display    = ''; document.getElementById('tab-otp').classList.add('active'); }
-      if (tab === 'forgot') { document.getElementById('forgot-form').style.display = ''; }
+      if (tab==='login')  { document.getElementById('login-form').style.display='';  document.getElementById('tab-login').classList.add('active'); }
+      if (tab==='signup') { document.getElementById('signup-form').style.display=''; document.getElementById('tab-signup').classList.add('active'); }
+      if (tab==='otp')    { document.getElementById('otp-form').style.display='';    document.getElementById('tab-otp').classList.add('active'); }
+      if (tab==='forgot') { document.getElementById('forgot-form').style.display=''; }
     }
 
-    // ══════════════════════════════════════════════
-    // GENERATE 6-DIGIT OTP
-    // ══════════════════════════════════════════════
-    function generateOTP() {
-      return Math.floor(100000 + Math.random() * 900000).toString();
-    }
+    // ── Generate OTP ────────────────────────────
+    function generateOTP() { return Math.floor(100000 + Math.random()*900000).toString(); }
 
-    // ══════════════════════════════════════════════
-    // SEND EMAIL OTP (using Firebase Email/Password trick)
-    // We store a temp OTP in Firestore with expiry,
-    // and send it via Firebase's email verification flow
-    // ══════════════════════════════════════════════
-    async function sendEmailOTP() {
-      const btn   = document.getElementById('send-email-otp-btn');
-      const email = document.getElementById('otp-email').value.trim().toLowerCase();
-
-      if (!email || !email.includes('@')) {
-        showAlert('auth-alert', 'Please enter a valid email address.', 'error');
-        return;
-      }
+    // ══════════════════════════════════════════════════
+    // FORGOT PASSWORD FLOW
+    // ══════════════════════════════════════════════════
+    async function sendForgotOTP() {
+      const btn   = document.getElementById('forgot-send-btn');
+      const email = document.getElementById('forgot-email').value.trim().toLowerCase();
+      if (!email || !email.includes('@')) { showAlert('auth-alert','Please enter a valid email.','error'); return; }
 
       btn.disabled = true;
       btn.innerHTML = '<span class="spinner"></span> Sending OTP…';
 
-      // Generate a 6-digit OTP
-      generatedOTP = generateOTP();
-      otpEmail     = email;
+      forgotOTP   = generateOTP();
+      forgotEmail = email;
 
-      // Save OTP to Firestore with 10 min expiry
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+      await db.collection('email_otps').doc('reset_' + email).set({
+        otp: forgotOTP, email,
+        expiresAt: firebase.firestore.Timestamp.fromDate(expiresAt),
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        used: false, type: 'password_reset'
+      });
+
       try {
-        await db.collection('email_otps').doc(email).set({
-          otp:       generatedOTP,
-          email:     email,
-          expiresAt: firebase.firestore.Timestamp.fromDate(expiresAt),
-          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-          used:      false
+        await emailjs.send('quizforge_service', 'quizforge_otp', {
+          to_email: email, email, otp: forgotOTP
         });
+        document.getElementById('forgot-step-1').style.display = 'none';
+        document.getElementById('forgot-step-2').style.display = '';
+        document.getElementById('forgot-otp-sent-to').textContent = email;
+        document.getElementById('fotp-0').focus();
+        showAlert('auth-alert','✓ OTP sent to your email! Check inbox and spam.','success');
+        startFotpTimer();
+        startFotpResend();
       } catch(e) {
-        showAlert('auth-alert', 'Failed to prepare OTP. Please try again.', 'error');
-        btn.disabled = false;
-        btn.textContent = 'Send OTP to Email';
-        return;
+        showAlert('auth-alert','Failed to send OTP. Check EmailJS setup.','error');
       }
-
-      // Send OTP to email via EmailJS
-      try {
-        await emailjs.send(
-          'quizforge_service',   // Service ID
-          'quizforge_otp',       // Template ID
-          {
-            to_email: email,     // matches {{to_email}} in template
-            otp:      generatedOTP, // matches {{otp}} in template
-            email:    email      // extra variable in case template uses {{email}}
-          }
-        );
-
-        // Success — show OTP input step
-        document.getElementById('otp-step-1').style.display = 'none';
-        document.getElementById('otp-step-2').style.display = '';
-        document.getElementById('otp-sent-to').textContent  = email;
-        document.getElementById('otp-0').focus();
-        showAlert('auth-alert', '✓ OTP sent to your email! Check inbox and spam folder.', 'success');
-        startOTPExpireTimer();
-        startResendTimer();
-        btn.disabled = false;
-        btn.textContent = 'Send OTP to Email';
-
-      } catch(e) {
-        console.error('EmailJS error:', e);
-        showAlert('auth-alert', 'Failed to send email. Check your EmailJS setup.', 'error');
-        btn.disabled = false;
-        btn.textContent = 'Send OTP to Email';
-      }
+      btn.disabled = false;
+      btn.textContent = 'Send Reset OTP';
     }
 
-    // ══════════════════════════════════════════════
-    // VERIFY EMAIL OTP
-    // ══════════════════════════════════════════════
-    async function verifyEmailOTP() {
-      const btn        = document.getElementById('verify-email-otp-btn');
-      const enteredOTP = [0,1,2,3,4,5].map(i => document.getElementById('otp-'+i).value).join('');
-
-      if (enteredOTP.length !== 6) {
-        showAlert('auth-alert', 'Please enter all 6 digits.', 'error');
-        return;
-      }
+    async function verifyForgotOTP() {
+      const btn      = document.getElementById('forgot-verify-btn');
+      const entered  = [0,1,2,3,4,5].map(i => document.getElementById('fotp-'+i).value).join('');
+      if (entered.length !== 6) { showAlert('auth-alert','Please enter all 6 digits.','error'); return; }
 
       btn.disabled = true;
       btn.innerHTML = '<span class="spinner"></span> Verifying…';
 
       try {
-        // Check OTP from Firestore
-        const otpDoc = await db.collection('email_otps').doc(otpEmail).get();
+        const doc  = await db.collection('email_otps').doc('reset_' + forgotEmail).get();
+        if (!doc.exists)                          { showAlert('auth-alert','OTP not found. Request a new one.','error'); btn.disabled=false; btn.textContent='Verify OTP'; return; }
+        const data = doc.data();
+        if (new Date() > data.expiresAt.toDate()) { showAlert('auth-alert','OTP expired. Request a new one.','error');  btn.disabled=false; btn.textContent='Verify OTP'; clearFotpBoxes(); return; }
+        if (data.used)                            { showAlert('auth-alert','OTP already used.','error');                  btn.disabled=false; btn.textContent='Verify OTP'; clearFotpBoxes(); return; }
+        if (entered !== data.otp)                 { showAlert('auth-alert','✗ Wrong OTP. Try again.','error');            btn.disabled=false; btn.textContent='Verify OTP'; clearFotpBoxes(); return; }
 
-        if (!otpDoc.exists) {
-          showAlert('auth-alert', 'OTP not found. Please request a new one.', 'error');
-          btn.disabled = false; btn.textContent = 'Verify & Login'; return;
-        }
+        // Mark used
+        await db.collection('email_otps').doc('reset_' + forgotEmail).update({ used: true });
+        clearFotpTimers();
 
-        const otpData = otpDoc.data();
+        // Move to step 3
+        document.getElementById('forgot-step-2').style.display = 'none';
+        document.getElementById('forgot-step-3').style.display = '';
+        showAlert('auth-alert','','');
+        document.getElementById('new-pwd-1').focus();
+      } catch(e) {
+        showAlert('auth-alert','Error: ' + e.message, 'error');
+        btn.disabled = false; btn.textContent = 'Verify OTP';
+      }
+    }
 
-        // Check expired
-        if (new Date() > otpData.expiresAt.toDate()) {
-          showAlert('auth-alert', 'OTP has expired. Please request a new one.', 'error');
-          btn.disabled = false; btn.textContent = 'Verify & Login'; clearOTPBoxes(); return;
-        }
+    async function setNewPassword() {
+      const btn  = document.getElementById('set-pwd-btn');
+      const pwd1 = document.getElementById('new-pwd-1').value;
+      const pwd2 = document.getElementById('new-pwd-2').value;
+      if (pwd1.length < 6)   { showAlert('auth-alert','Password must be at least 6 characters.','error'); return; }
+      if (pwd1 !== pwd2)     { showAlert('auth-alert','Passwords do not match.','error'); return; }
 
-        // Check already used
-        if (otpData.used) {
-          showAlert('auth-alert', 'OTP already used. Please request a new one.', 'error');
-          btn.disabled = false; btn.textContent = 'Verify & Login'; clearOTPBoxes(); return;
-        }
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Updating…';
 
-        // Check OTP match
-        if (enteredOTP !== otpData.otp) {
-          showAlert('auth-alert', '✗ Wrong OTP. Please try again.', 'error');
-          btn.disabled = false; btn.textContent = 'Verify & Login'; clearOTPBoxes(); return;
-        }
-
-        // ✅ OTP is correct — mark used
-        await db.collection('email_otps').doc(otpEmail).update({ used: true });
-
-        // ── SIGN IN / CREATE ACCOUNT ─────────────────────────────
-        // Strategy: always delete old stored password if sign-in fails
-        // so we never get stuck with a wrong password
-        // ─────────────────────────────────────────────────────────
-
-        let signedIn = false;
-
-        // 1. Check if we have a stored password for this email
-        const passDoc = await db.collection('otp_passwords').doc(otpEmail).get();
+      try {
+        // Sign user in with stored OTP password first, then update
+        const passDoc = await db.collection('otp_passwords').doc(forgotEmail).get();
+        let signedIn  = false;
 
         if (passDoc.exists) {
-          const storedPass = passDoc.data().password;
           try {
-            await auth.signInWithEmailAndPassword(otpEmail, storedPass);
+            await auth.signInWithEmailAndPassword(forgotEmail, passDoc.data().password);
             signedIn = true;
-          } catch(e) {
-            // Stored password is wrong — delete it and start fresh
-            await db.collection('otp_passwords').doc(otpEmail).delete();
-            signedIn = false;
-          }
+          } catch(e) { signedIn = false; }
         }
 
         if (!signedIn) {
-          // Generate a brand new password
-          const newPass = 'QF_' + Date.now() + '_' +
-                          Math.random().toString(36).slice(2,12) + '_Zz!';
-
-          // Check if account exists
-          const methods = await auth.fetchSignInMethodsForEmail(otpEmail);
-
+          // Try creating account or sign in via otp flow
+          const methods = await auth.fetchSignInMethodsForEmail(forgotEmail);
           if (methods.length === 0) {
-            // No account — create one
-            const cred = await auth.createUserWithEmailAndPassword(otpEmail, newPass);
-            const uid  = cred.user.uid;
-            const uname = otpEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g,'');
+            // Create new account with new password directly
+            await auth.createUserWithEmailAndPassword(forgotEmail, pwd1);
+            const uid   = auth.currentUser.uid;
+            const uname = forgotEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g,'');
             await db.collection('users').doc(uid).set({
               uid, firstName:'', lastName:'', fullName:'',
-              username: uname, email: otpEmail, phone:'',
+              username: uname, email: forgotEmail, phone:'',
               createdAt: firebase.firestore.FieldValue.serverTimestamp()
             });
+            showAlert('auth-alert','✓ Account created and password set! Redirecting…','success');
+            setTimeout(() => window.location.href = 'dashboard.html', 1500);
+            return;
           } else {
-            // Account exists with different password — update it
-            // We do this by creating a temp account won't work,
-            // so we use confirmPasswordReset flow is not available client-side
-            // BEST APPROACH: use Firebase Admin via a small Cloud Function
-            // WORKAROUND for now: send password reset email
-            clearTimers();
-            showAlert('auth-alert',
-              '✅ OTP verified!<br><br>' +
-              'Your email <strong>' + otpEmail + '</strong> already has a password-based account.<br><br>' +
-              'Please <strong>check your inbox</strong> — we sent a password reset link. ' +
-              'After resetting, you can log in with either password or OTP.',
-              'success');
-            await auth.sendPasswordResetEmail(otpEmail);
-            btn.disabled = false;
-            btn.textContent = 'Verify & Login';
+            // Account exists — use Firebase reset email as final fallback
+            await auth.sendPasswordResetEmail(forgotEmail);
+            showAlert('auth-alert','✓ A password reset link was sent to your email. Click it to set your new password.','success');
+            btn.disabled = false; btn.textContent = 'Set New Password';
             return;
           }
-
-          // Save the new password for next time
-          await db.collection('otp_passwords').doc(otpEmail).set({
-            password: newPass, email: otpEmail,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-          });
-          signedIn = true;
         }
 
-        // ✅ Successfully signed in
-        if (!auth.currentUser) {
-          showAlert('auth-alert', 'Login error — please try again.', 'error');
-          btn.disabled = false; btn.textContent = 'Verify & Login';
-          return;
-        }
+        // Update password
+        await auth.currentUser.updatePassword(pwd1);
 
-        clearTimers();
-        localStorage.setItem('qf_uid',   auth.currentUser.uid);
-        localStorage.setItem('qf_email', auth.currentUser.email || otpEmail);
-        showAlert('auth-alert', '✓ OTP verified! Redirecting…', 'success');
-
-        await new Promise(resolve => {
-          let done = false;
-          auth.onAuthStateChanged(user => {
-            if (user && !done) { done = true; resolve(); }
-          });
-          setTimeout(() => { if (!done) { done = true; resolve(); } }, 4000);
+        // Update stored OTP password too
+        const newOtpPass = 'QF_' + Date.now() + '_' + Math.random().toString(36).slice(2,12) + '_Zz!';
+        await db.collection('otp_passwords').doc(forgotEmail).set({
+          password: pwd1, email: forgotEmail,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
-        window.location.replace('dashboard.html');
+        showAlert('auth-alert','✓ Password updated! Redirecting to dashboard…','success');
+        setTimeout(() => window.location.href = 'dashboard.html', 1500);
 
       } catch(e) {
-        console.error('OTP verify error:', e);
-        showAlert('auth-alert', 'Something went wrong: ' + (e.message || e), 'error');
-        btn.disabled = false;
-        btn.textContent = 'Verify & Login';
+        showAlert('auth-alert','Error: ' + e.message, 'error');
+        btn.disabled = false; btn.textContent = 'Set New Password';
       }
     }
 
-    function backToOTPStep1() {
-      document.getElementById('otp-step-1').style.display = '';
-      document.getElementById('otp-step-2').style.display = 'none';
-      clearTimers();
-      clearOTPBoxes();
+    function backToForgotStep1() {
+      document.getElementById('forgot-step-1').style.display = '';
+      document.getElementById('forgot-step-2').style.display = 'none';
+      clearFotpTimers(); clearFotpBoxes();
     }
 
-    function clearOTPBoxes() {
-      [0,1,2,3,4,5].forEach(i => {
-        const b = document.getElementById('otp-'+i);
-        if (b) { b.value = ''; b.classList.remove('filled'); }
-      });
-      document.getElementById('otp-0')?.focus();
-    }
-
-    function clearTimers() {
-      clearInterval(otpExpireTimer);
-      clearInterval(resendTimer);
-    }
-
-    // OTP expire countdown (10 mins)
-    function startOTPExpireTimer() {
-      otpExpireLeft = 600;
-      otpExpireTimer = setInterval(() => {
-        otpExpireLeft--;
-        const el = document.getElementById('otp-expire-timer');
-        if (el) {
-          const m = Math.floor(otpExpireLeft / 60).toString().padStart(2,'0');
-          const s = (otpExpireLeft % 60).toString().padStart(2,'0');
-          el.textContent = `${m}:${s}`;
-        }
-        if (otpExpireLeft <= 0) {
-          clearInterval(otpExpireTimer);
-          if (el) el.textContent = 'Expired';
-        }
-      }, 1000);
-    }
-
-    // Resend countdown (30 secs)
-    function startResendTimer() {
-      let s = 30;
-      const area = document.getElementById('resend-area');
-      if (area) area.innerHTML = `Resend in <strong id="resend-count">${s}</strong>s`;
-      resendTimer = setInterval(() => {
+    function startFotpTimer() {
+      let s = 600;
+      fotpExpireTimer = setInterval(() => {
         s--;
-        const el = document.getElementById('resend-count');
-        const ar = document.getElementById('resend-area');
-        if (s <= 0) {
-          clearInterval(resendTimer);
-          if (ar) ar.innerHTML = `<a onclick="resendOTP()">Resend OTP</a>`;
-        } else {
-          if (el) el.textContent = s;
-        }
+        const el = document.getElementById('fotp-timer');
+        if (el) { const m=Math.floor(s/60).toString().padStart(2,'0'); const sec=(s%60).toString().padStart(2,'0'); el.textContent=m+':'+sec; }
+        if (s <= 0) clearInterval(fotpExpireTimer);
       }, 1000);
     }
 
-    async function resendOTP() {
-      backToOTPStep1();
-      document.getElementById('otp-email').value = otpEmail;
-      setTimeout(sendEmailOTP, 300);
+    function startFotpResend() {
+      let s = 30;
+      const area = document.getElementById('forgot-resend-area');
+      if (area) area.innerHTML = 'Resend in <strong>'+s+'</strong>s';
+      fotpResendTimer = setInterval(() => {
+        s--;
+        const el  = document.getElementById('forgot-resend-area');
+        if (s <= 0) { clearInterval(fotpResendTimer); if(el) el.innerHTML='<a onclick="sendForgotOTP()">Resend OTP</a>'; }
+        else if (el) el.innerHTML = 'Resend in <strong>'+s+'</strong>s';
+      }, 1000);
     }
 
-    // OTP box logic
-    function otpInput(index) {
-      const box = document.getElementById('otp-' + index);
+    function clearFotpTimers() { clearInterval(fotpExpireTimer); clearInterval(fotpResendTimer); }
+    function clearFotpBoxes()  { [0,1,2,3,4,5].forEach(i=>{ const b=document.getElementById('fotp-'+i); if(b){b.value='';b.classList.remove('filled');} }); }
+
+    function fotpInput(i) {
+      const box = document.getElementById('fotp-'+i);
       box.value = box.value.replace(/[^0-9]/g,'');
-      if (box.value) {
-        box.classList.add('filled');
-        if (index < 5) document.getElementById('otp-' + (index+1)).focus();
-        else { box.blur(); verifyEmailOTP(); }
-      } else {
-        box.classList.remove('filled');
-      }
+      if (box.value) { box.classList.add('filled'); if(i<5) document.getElementById('fotp-'+(i+1)).focus(); else { box.blur(); verifyForgotOTP(); } }
+      else box.classList.remove('filled');
+    }
+    function fotpKeydown(e,i) { if(e.key==='Backspace'&&!document.getElementById('fotp-'+i).value&&i>0) document.getElementById('fotp-'+(i-1)).focus(); }
+
+    function checkNewPwdStrength() {
+      const pwd=document.getElementById('new-pwd-1').value;
+      const fill=document.getElementById('new-pwd-fill');
+      const hint=document.getElementById('new-pwd-hint');
+      let s=0;
+      if(pwd.length>=6)s++; if(pwd.length>=10)s++; if(/[A-Z]/.test(pwd))s++; if(/[0-9]/.test(pwd))s++; if(/[^A-Za-z0-9]/.test(pwd))s++;
+      const info=s<=1?['Weak','var(--danger)']:s<=3?['Medium','var(--warning)']:['Strong ✓','var(--success)'];
+      fill.style.width=(s*20)+'%'; fill.style.background=info[1];
+      hint.innerHTML='<span style="color:'+info[1]+'">'+info[0]+'</span>';
     }
 
-    function otpKeydown(e, index) {
-      if (e.key === 'Backspace' && !document.getElementById('otp-'+index).value && index > 0) {
-        document.getElementById('otp-'+(index-1)).focus();
-      }
+    // ══════════════════════════════════════════════════
+    // EMAIL OTP LOGIN
+    // ══════════════════════════════════════════════════
+    async function sendEmailOTP() {
+      const btn   = document.getElementById('send-email-otp-btn');
+      const email = document.getElementById('otp-email').value.trim().toLowerCase();
+      if (!email||!email.includes('@')) { showAlert('auth-alert','Please enter a valid email.','error'); return; }
+      btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Sending OTP…';
+      generatedOTP=generateOTP(); otpEmail=email;
+      const expiresAt=new Date(Date.now()+10*60*1000);
+      try {
+        await db.collection('email_otps').doc(email).set({
+          otp:generatedOTP, email,
+          expiresAt:firebase.firestore.Timestamp.fromDate(expiresAt),
+          createdAt:firebase.firestore.FieldValue.serverTimestamp(), used:false
+        });
+        await emailjs.send('quizforge_service','quizforge_otp',{ to_email:email, email, otp:generatedOTP });
+        document.getElementById('otp-step-1').style.display='none';
+        document.getElementById('otp-step-2').style.display='';
+        document.getElementById('otp-sent-to').textContent=email;
+        document.getElementById('otp-0').focus();
+        showAlert('auth-alert','✓ OTP sent! Check inbox and spam.','success');
+        startOTPExpireTimer(); startResendTimer();
+      } catch(e) { showAlert('auth-alert','Failed to send OTP.','error'); }
+      btn.disabled=false; btn.textContent='Send OTP to Email';
     }
 
-    // Paste full OTP at once
-    document.addEventListener('paste', function(e) {
-      if (!document.activeElement?.classList.contains('otp-box')) return;
-      e.preventDefault();
-      const digits = (e.clipboardData||window.clipboardData).getData('text').replace(/\D/g,'').slice(0,6);
-      digits.split('').forEach((d,i) => {
-        const box = document.getElementById('otp-'+i);
-        if (box) { box.value=d; box.classList.add('filled'); }
-      });
-      if (digits.length === 6) verifyEmailOTP();
-    });
+    async function verifyEmailOTP() {
+      const btn=document.getElementById('verify-email-otp-btn');
+      const entered=[0,1,2,3,4,5].map(i=>document.getElementById('otp-'+i).value).join('');
+      if (entered.length!==6) { showAlert('auth-alert','Please enter all 6 digits.','error'); return; }
+      btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Verifying…';
+      try {
+        const otpDoc=await db.collection('email_otps').doc(otpEmail).get();
+        if (!otpDoc.exists) { showAlert('auth-alert','OTP not found.','error'); btn.disabled=false; btn.textContent='Verify & Login'; return; }
+        const d=otpDoc.data();
+        if (new Date()>d.expiresAt.toDate()) { showAlert('auth-alert','OTP expired.','error'); btn.disabled=false; btn.textContent='Verify & Login'; clearOTPBoxes(); return; }
+        if (d.used) { showAlert('auth-alert','OTP already used.','error'); btn.disabled=false; btn.textContent='Verify & Login'; clearOTPBoxes(); return; }
+        if (entered!==d.otp) { showAlert('auth-alert','✗ Wrong OTP.','error'); btn.disabled=false; btn.textContent='Verify & Login'; clearOTPBoxes(); return; }
+        await db.collection('email_otps').doc(otpEmail).update({used:true});
+        let signedIn=false;
+        const passDoc=await db.collection('otp_passwords').doc(otpEmail).get();
+        if (passDoc.exists) {
+          try { await auth.signInWithEmailAndPassword(otpEmail,passDoc.data().password); signedIn=true; } catch(e){ await db.collection('otp_passwords').doc(otpEmail).delete(); }
+        }
+        if (!signedIn) {
+          const newPass='QF_'+Date.now()+'_'+Math.random().toString(36).slice(2,12)+'_Zz!';
+          const methods=await auth.fetchSignInMethodsForEmail(otpEmail);
+          if (methods.length===0) {
+            const cred=await auth.createUserWithEmailAndPassword(otpEmail,newPass);
+            const uid=cred.user.uid;
+            const uname=otpEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g,'');
+            const uDoc=await db.collection('users').doc(uid).get();
+            if(!uDoc.exists) await db.collection('users').doc(uid).set({uid,firstName:'',lastName:'',fullName:'',username:uname,email:otpEmail,phone:'',createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+          } else {
+            showAlert('auth-alert','Account exists with a different login. Use password login or reset your password.','error');
+            btn.disabled=false; btn.textContent='Verify & Login'; return;
+          }
+          await db.collection('otp_passwords').doc(otpEmail).set({password:newPass,email:otpEmail,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+        }
+        if (!auth.currentUser) { showAlert('auth-alert','Login error — try again.','error'); btn.disabled=false; btn.textContent='Verify & Login'; return; }
+        clearTimers();
+        localStorage.setItem('qf_uid',auth.currentUser.uid);
+        localStorage.setItem('qf_email',auth.currentUser.email||otpEmail);
+        showAlert('auth-alert','✓ OTP verified! Redirecting…','success');
+        await new Promise(resolve=>{ let done=false; auth.onAuthStateChanged(user=>{ if(user&&!done){done=true;resolve();} }); setTimeout(()=>{if(!done){done=true;resolve();}},4000); });
+        window.location.replace('dashboard.html');
+      } catch(e) { showAlert('auth-alert','Error: '+(e.message||e),'error'); btn.disabled=false; btn.textContent='Verify & Login'; }
+    }
 
-    // ══════════════════════════════════════════════
+    function backToOTPStep1() { document.getElementById('otp-step-1').style.display=''; document.getElementById('otp-step-2').style.display='none'; clearTimers(); clearOTPBoxes(); }
+    function clearOTPBoxes()  { [0,1,2,3,4,5].forEach(i=>{ const b=document.getElementById('otp-'+i); if(b){b.value='';b.classList.remove('filled');} }); }
+
+    function startOTPExpireTimer() {
+      let s=600; otpExpireTimer=setInterval(()=>{ s--; const el=document.getElementById('otp-expire-timer'); if(el){const m=Math.floor(s/60).toString().padStart(2,'0');const sec=(s%60).toString().padStart(2,'0');el.textContent=m+':'+sec;} if(s<=0)clearInterval(otpExpireTimer); },1000);
+    }
+    function startResendTimer() {
+      let s=30; const area=document.getElementById('resend-area'); if(area)area.innerHTML='Resend in <strong>'+s+'</strong>s';
+      resendTimer=setInterval(()=>{ s--; const el=document.getElementById('resend-area'); if(s<=0){clearInterval(resendTimer);if(el)el.innerHTML='<a onclick="sendEmailOTP()">Resend OTP</a>';}else if(el)el.innerHTML='Resend in <strong>'+s+'</strong>s'; },1000);
+    }
+    function clearTimers() { clearInterval(otpExpireTimer); clearInterval(resendTimer); }
+
+    function otpInput(i) { const box=document.getElementById('otp-'+i); box.value=box.value.replace(/[^0-9]/g,''); if(box.value){box.classList.add('filled');if(i<5)document.getElementById('otp-'+(i+1)).focus();else{box.blur();verifyEmailOTP();}}else box.classList.remove('filled'); }
+    function otpKeydown(e,i) { if(e.key==='Backspace'&&!document.getElementById('otp-'+i).value&&i>0)document.getElementById('otp-'+(i-1)).focus(); }
+
+    // ══════════════════════════════════════════════════
     // EMAIL + PASSWORD LOGIN
-    // ══════════════════════════════════════════════
+    // ══════════════════════════════════════════════════
     async function handleLogin() {
-      const btn      = document.getElementById('login-btn');
-      const email    = document.getElementById('login-email').value.trim();
-      const password = document.getElementById('login-password').value;
-      if (!email || !password) { showAlert('auth-alert','Please fill in all fields.','error'); return; }
-
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner"></span> Logging in…';
-
-      const { error } = await signIn(email, password);
-      if (error) {
-        let msg = 'Login failed. Please try again.';
-        if (error.code === 'auth/user-not-found')     msg = 'No account with this email.';
-        if (error.code === 'auth/wrong-password')     msg = 'Wrong password.';
-        if (error.code === 'auth/invalid-credential') msg = 'Wrong email or password.';
-        if (error.code === 'auth/too-many-requests')  msg = 'Too many attempts. Wait a moment.';
-        if (error.code === 'auth/invalid-email')      msg = 'Please enter a valid email.';
-        showAlert('auth-alert', msg, 'error');
-        btn.disabled = false;
-        btn.textContent = 'Login to Dashboard';
-      } else {
-        showAlert('auth-alert','✓ Welcome back! Redirecting…','success');
-        setTimeout(() => window.location.href = 'dashboard.html', 800);
-      }
+      const btn=document.getElementById('login-btn');
+      const email=document.getElementById('login-email').value.trim();
+      const password=document.getElementById('login-password').value;
+      if(!email||!password){showAlert('auth-alert','Please fill in all fields.','error');return;}
+      btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Logging in…';
+      const {error}=await signIn(email,password);
+      if(error){
+        let msg='Login failed.';
+        if(error.code==='auth/user-not-found')msg='No account with this email.';
+        if(error.code==='auth/wrong-password')msg='Wrong password.';
+        if(error.code==='auth/invalid-credential')msg='Wrong email or password.';
+        if(error.code==='auth/too-many-requests')msg='Too many attempts. Wait a moment.';
+        showAlert('auth-alert',msg,'error'); btn.disabled=false; btn.textContent='Login to Dashboard';
+      } else { showAlert('auth-alert','✓ Welcome back! Redirecting…','success'); setTimeout(()=>window.location.href='dashboard.html',800); }
     }
 
-    // ══════════════════════════════════════════════
-    // SIGN UP WITH PERSONAL DETAILS
-    // ══════════════════════════════════════════════
-    let usernameTimer = null;
+    // ══════════════════════════════════════════════════
+    // SIGN UP
+    // ══════════════════════════════════════════════════
+    let usernameTimer=null;
     async function checkUsername() {
-      const val  = document.getElementById('signup-username').value.trim().toLowerCase();
-      const hint = document.getElementById('username-hint');
+      const val=document.getElementById('signup-username').value.trim().toLowerCase();
+      const hint=document.getElementById('username-hint');
       clearTimeout(usernameTimer);
-      if (!val) { hint.innerHTML = ''; return; }
-      if (val.length < 3) { hint.innerHTML = '<span style="color:var(--danger);">Min. 3 characters</span>'; return; }
-      if (!/^[a-z0-9_]+$/.test(val)) { hint.innerHTML = '<span style="color:var(--danger);">Only letters, numbers, underscore</span>'; return; }
-      hint.innerHTML = '<span style="color:var(--text-muted);">Checking…</span>';
-      usernameTimer = setTimeout(async () => {
-        const snap = await db.collection('users').where('username','==',val).get();
-        hint.innerHTML = snap.empty
-          ? '<span style="color:var(--success);">✓ Available!</span>'
-          : '<span style="color:var(--danger);">✗ Already taken</span>';
-      }, 600);
+      if(!val){hint.innerHTML='';return;}
+      if(val.length<3){hint.innerHTML='<span style="color:var(--danger);">Min. 3 characters</span>';return;}
+      if(!/^[a-z0-9_]+$/.test(val)){hint.innerHTML='<span style="color:var(--danger);">Only letters, numbers, underscore</span>';return;}
+      hint.innerHTML='<span style="color:var(--text-muted);">Checking…</span>';
+      usernameTimer=setTimeout(async()=>{ const snap=await db.collection('users').where('username','==',val).get(); hint.innerHTML=snap.empty?'<span style="color:var(--success);">✓ Available!</span>':'<span style="color:var(--danger);">✗ Already taken</span>'; },600);
     }
 
     function checkPasswordStrength() {
-      const pwd  = document.getElementById('signup-password').value;
-      const fill = document.getElementById('pwd-fill');
-      const hint = document.getElementById('pwd-hint');
-      let strength = 0;
-      if (pwd.length >= 6)            strength++;
-      if (pwd.length >= 10)           strength++;
-      if (/[A-Z]/.test(pwd))          strength++;
-      if (/[0-9]/.test(pwd))          strength++;
-      if (/[^A-Za-z0-9]/.test(pwd))   strength++;
-      const info = strength <= 1 ? ['Weak','var(--danger)']
-                 : strength <= 3 ? ['Medium','var(--warning)']
-                 :                 ['Strong ✓','var(--success)'];
-      fill.style.width      = (strength * 20) + '%';
-      fill.style.background = info[1];
-      hint.innerHTML = `<span style="color:${info[1]};">${info[0]}</span>`;
+      const pwd=document.getElementById('signup-password').value;
+      const fill=document.getElementById('pwd-fill'); const hint=document.getElementById('pwd-hint');
+      let s=0; if(pwd.length>=6)s++; if(pwd.length>=10)s++; if(/[A-Z]/.test(pwd))s++; if(/[0-9]/.test(pwd))s++; if(/[^A-Za-z0-9]/.test(pwd))s++;
+      const info=s<=1?['Weak','var(--danger)']:s<=3?['Medium','var(--warning)']:['Strong ✓','var(--success)'];
+      fill.style.width=(s*20)+'%'; fill.style.background=info[1];
+      hint.innerHTML='<span style="color:'+info[1]+'">'+info[0]+'</span>';
     }
 
     async function handleSignup() {
-      const btn       = document.getElementById('signup-btn');
-      const firstName = document.getElementById('signup-firstname').value.trim();
-      const lastName  = document.getElementById('signup-lastname').value.trim();
-      const username  = document.getElementById('signup-username').value.trim().toLowerCase();
-      const email     = document.getElementById('signup-email').value.trim();
-      const password  = document.getElementById('signup-password').value;
-      const confirm   = document.getElementById('signup-confirm').value;
-
-      if (!firstName)   { showAlert('auth-alert','Please enter your first name.','error'); return; }
-      if (!lastName)    { showAlert('auth-alert','Please enter your last name.','error'); return; }
-      if (!username || username.length < 3) { showAlert('auth-alert','Username must be at least 3 characters.','error'); return; }
-      if (!/^[a-z0-9_]+$/.test(username))   { showAlert('auth-alert','Username: only letters, numbers, underscore.','error'); return; }
-      if (!email)       { showAlert('auth-alert','Please enter your email.','error'); return; }
-      if (password.length < 6) { showAlert('auth-alert','Password must be at least 6 characters.','error'); return; }
-      if (password !== confirm) { showAlert('auth-alert','Passwords do not match.','error'); return; }
-
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner"></span> Creating account…';
-
-      // Check username taken
-      const uSnap = await db.collection('users').where('username','==',username).get();
-      if (!uSnap.empty) {
-        showAlert('auth-alert','This username is already taken.','error');
-        btn.disabled = false; btn.textContent = 'Create Free Account'; return;
+      const btn=document.getElementById('signup-btn');
+      const firstName=document.getElementById('signup-firstname').value.trim();
+      const lastName=document.getElementById('signup-lastname').value.trim();
+      const username=document.getElementById('signup-username').value.trim().toLowerCase();
+      const email=document.getElementById('signup-email').value.trim();
+      const password=document.getElementById('signup-password').value;
+      const confirm=document.getElementById('signup-confirm').value;
+      if(!firstName){showAlert('auth-alert','Please enter your first name.','error');return;}
+      if(!lastName){showAlert('auth-alert','Please enter your last name.','error');return;}
+      if(!username||username.length<3){showAlert('auth-alert','Username must be at least 3 characters.','error');return;}
+      if(!/^[a-z0-9_]+$/.test(username)){showAlert('auth-alert','Username: only letters, numbers, underscore.','error');return;}
+      if(!email){showAlert('auth-alert','Please enter your email.','error');return;}
+      if(password.length<6){showAlert('auth-alert','Password must be at least 6 characters.','error');return;}
+      if(password!==confirm){showAlert('auth-alert','Passwords do not match.','error');return;}
+      btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Creating account…';
+      const uSnap=await db.collection('users').where('username','==',username).get();
+      if(!uSnap.empty){showAlert('auth-alert','Username already taken.','error');btn.disabled=false;btn.textContent='Create Free Account';return;}
+      const {data:user,error}=await signUp(email,password);
+      if(error){
+        let msg='Sign up failed.';
+        if(error.code==='auth/email-already-in-use')msg='Email already registered. Try logging in.';
+        if(error.code==='auth/weak-password')msg='Password too weak.';
+        showAlert('auth-alert',msg,'error'); btn.disabled=false; btn.textContent='Create Free Account'; return;
       }
-
-      const { data: user, error } = await signUp(email, password);
-      if (error) {
-        let msg = 'Sign up failed.';
-        if (error.code === 'auth/email-already-in-use') msg = 'This email is already registered. Try logging in.';
-        if (error.code === 'auth/weak-password')        msg = 'Password must be at least 6 characters.';
-        if (error.code === 'auth/invalid-email')        msg = 'Please enter a valid email.';
-        showAlert('auth-alert', msg, 'error');
-        btn.disabled = false; btn.textContent = 'Create Free Account'; return;
-      }
-
-      // Save profile to Firestore
-      await db.collection('users').doc(user.uid).set({
-        uid: user.uid, firstName, lastName,
-        fullName:  firstName + ' ' + lastName,
-        username, email, phone: '',
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-
-      // Set display name
-      await auth.currentUser.updateProfile({ displayName: firstName + ' ' + lastName });
-
+      await db.collection('users').doc(user.uid).set({uid:user.uid,firstName,lastName,fullName:firstName+' '+lastName,username,email,phone:'',createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+      await auth.currentUser.updateProfile({displayName:firstName+' '+lastName});
       showAlert('auth-alert','✓ Account created! Redirecting…','success');
-      setTimeout(() => window.location.href = 'dashboard.html', 1000);
+      setTimeout(()=>window.location.href='dashboard.html',1000);
     }
 
-    // ══════════════════════════════════════════════
+    // ══════════════════════════════════════════════════
     // GOOGLE LOGIN
-    // ══════════════════════════════════════════════
+    // ══════════════════════════════════════════════════
     async function handleGoogleLogin() {
       try {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        const result   = await auth.signInWithPopup(provider);
-        const user     = result.user;
-
-        // Save to Firestore if new user
-        const userDoc = await db.collection('users').doc(user.uid).get();
-        if (!userDoc.exists) {
-          const parts = (user.displayName || 'User').split(' ');
-          const uname = (user.email||'').split('@')[0].toLowerCase().replace(/[^a-z0-9]/g,'');
-          await db.collection('users').doc(user.uid).set({
-            uid: user.uid,
-            firstName: parts[0]||'',
-            lastName:  parts.slice(1).join(' ')||'',
-            fullName:  user.displayName||'',
-            username:  uname,
-            email:     user.email||'',
-            phone:     '',
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-          });
+        const provider=new firebase.auth.GoogleAuthProvider();
+        const result=await auth.signInWithPopup(provider);
+        const user=result.user;
+        const userDoc=await db.collection('users').doc(user.uid).get();
+        if(!userDoc.exists){
+          const parts=(user.displayName||'User').split(' ');
+          const uname=(user.email||'').split('@')[0].toLowerCase().replace(/[^a-z0-9]/g,'');
+          await db.collection('users').doc(user.uid).set({uid:user.uid,firstName:parts[0]||'',lastName:parts.slice(1).join(' ')||'',fullName:user.displayName||'',username:uname,email:user.email||'',phone:'',createdAt:firebase.firestore.FieldValue.serverTimestamp()});
         }
         showAlert('auth-alert','✓ Signed in! Redirecting…','success');
-        setTimeout(() => window.location.href = 'dashboard.html', 800);
+        setTimeout(()=>window.location.href='dashboard.html',800);
       } catch(e) {
-        let msg = 'Google sign-in failed.';
-        if (e.code === 'auth/popup-closed-by-user') msg = 'Popup closed. Please try again.';
-        if (e.code === 'auth/popup-blocked')        msg = 'Allow popups for this site and try again.';
-        showAlert('auth-alert', msg, 'error');
+        let msg='Google sign-in failed.';
+        if(e.code==='auth/popup-closed-by-user')msg='Popup closed. Try again.';
+        if(e.code==='auth/popup-blocked')msg='Allow popups for this site.';
+        showAlert('auth-alert',msg,'error');
       }
     }
 
-    // ══════════════════════════════════════════════
-    // FORGOT PASSWORD
-    // ══════════════════════════════════════════════
-    async function handleForgotPassword() {
-      const btn   = document.getElementById('forgot-btn');
-      const email = document.getElementById('forgot-email').value.trim();
-      if (!email) { showAlert('auth-alert','Please enter your email.','error'); return; }
-
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner"></span> Sending…';
-
-      // Generate a reset OTP
-      const resetOTP  = Math.floor(100000 + Math.random() * 900000).toString();
-      const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 mins
-
-      try {
-        // Save reset OTP to Firestore
-        await db.collection('email_otps').doc(email).set({
-          otp:       resetOTP,
-          email:     email,
-          expiresAt: firebase.firestore.Timestamp.fromDate(expiresAt),
-          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-          used:      false,
-          type:      'password_reset'
-        });
-
-        // Try Firebase built-in reset first
-        let firebaseSent = false;
-        try {
-          await auth.sendPasswordResetEmail(email);
-          firebaseSent = true;
-        } catch(firebaseErr) {
-          console.log('Firebase reset failed:', firebaseErr.code);
-        }
-
-        if (firebaseSent) {
-          showAlert('auth-alert',
-            '✓ Password reset email sent to <strong>' + email + '</strong>.<br>Check your inbox and spam folder!',
-            'success');
-        } else {
-          // Fallback: send OTP via EmailJS
-          await emailjs.send('quizforge_service', 'quizforge_otp', {
-            to_email: email,
-            email:    email,
-            otp:      resetOTP
-          });
-          showAlert('auth-alert',
-            '✓ A 6-digit reset OTP was sent to <strong>' + email + '</strong>.<br>' +
-            'Go to <strong>📧 Email OTP</strong> tab and enter it to login, then change your password.',
-            'success');
-        }
-
-        btn.textContent = '✓ Email Sent!';
-        setTimeout(() => switchTab('login'), 4000);
-
-      } catch(e) {
-        let msg = 'Failed to send reset email. Please try again.';
-        if (e.code === 'auth/invalid-email') msg = 'Please enter a valid email.';
-        showAlert('auth-alert', msg, 'error');
-        btn.disabled = false;
-        btn.textContent = 'Send Reset Email';
-      }
-    }
+    // Paste OTP
+    document.addEventListener('paste',function(e){
+      if(!document.activeElement?.classList.contains('otp-box'))return;
+      e.preventDefault();
+      const digits=(e.clipboardData||window.clipboardData).getData('text').replace(/\D/g,'').slice(0,6);
+      const prefix=document.activeElement.id.startsWith('fotp')?'fotp':'otp';
+      digits.split('').forEach((d,i)=>{ const box=document.getElementById(prefix+'-'+i); if(box){box.value=d;box.classList.add('filled');} });
+      if(digits.length===6){ if(prefix==='fotp')verifyForgotOTP(); else verifyEmailOTP(); }
+    });
   </script>
 </body>
 </html>
