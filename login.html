@@ -436,22 +436,26 @@
       // OTP is correct! Mark as used
       await db.collection('email_otps').doc(otpEmail).update({ used: true });
 
-      // Sign in or create account with Firebase
+      // Sign in using Firebase — use email + fixed secret password
+      // The password is always the same for OTP users (they never see it)
+      const otpPass = 'QuizForge_OTP_' + btoa(otpEmail).replace(/[^a-zA-Z0-9]/g,'').slice(0,16);
+
       try {
-        // Try sign in first
-        let userCredential;
+        // First try to sign in (user already exists)
         try {
-          // Check if user exists — try signing in with temp password
-          const tempPass = 'OTP_USER_' + otpEmail.replace(/[^a-z0-9]/gi,'');
-          userCredential = await auth.signInWithEmailAndPassword(otpEmail, tempPass);
-        } catch (signInErr) {
-          if (signInErr.code === 'auth/user-not-found' || signInErr.code === 'auth/wrong-password' || signInErr.code === 'auth/invalid-credential') {
-            // New user — create account
-            const tempPass = 'OTP_USER_' + otpEmail.replace(/[^a-z0-9]/gi,'');
-            userCredential = await auth.createUserWithEmailAndPassword(otpEmail, tempPass);
+          await auth.signInWithEmailAndPassword(otpEmail, otpPass);
+        } catch(signInErr) {
+          if (
+            signInErr.code === 'auth/user-not-found' ||
+            signInErr.code === 'auth/wrong-password' ||
+            signInErr.code === 'auth/invalid-credential' ||
+            signInErr.code === 'auth/invalid-login-credentials'
+          ) {
+            // New user — create account first
+            const newUser = await auth.createUserWithEmailAndPassword(otpEmail, otpPass);
             // Save basic profile to Firestore
-            const uid = userCredential.user.uid;
-            const uDoc = await db.collection('users').doc(uid).get();
+            const uid   = newUser.user.uid;
+            const uDoc  = await db.collection('users').doc(uid).get();
             if (!uDoc.exists) {
               const uname = otpEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g,'');
               await db.collection('users').doc(uid).set({
