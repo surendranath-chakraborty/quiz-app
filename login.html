@@ -10,6 +10,12 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
   <script src="firebase.js"></script>
   <script src="script.js"></script>
+  <!-- EmailJS SDK for sending real emails -->
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+  <script>
+    // Initialize EmailJS with your Public Key
+    emailjs.init("67KS-UpkK_MZAvNjK");
+  </script>
   <style>
     .otp-boxes { display:flex; gap:0.5rem; justify-content:center; margin:0.5rem 0; }
     .otp-box {
@@ -327,57 +333,49 @@
       generatedOTP = generateOTP();
       otpEmail     = email;
 
-      // Save OTP in Firestore with 10 min expiry
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
-      await db.collection('email_otps').doc(email).set({
-        otp:       generatedOTP,
-        email:     email,
-        expiresAt: firebase.firestore.Timestamp.fromDate(expiresAt),
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        used:      false
-      });
-
-      // Send OTP via Firebase Email Sign-in Link
-      // We embed the OTP in a custom way using actionCodeSettings
-      const actionCodeSettings = {
-        url: window.location.origin + '/login.html?email=' + encodeURIComponent(email),
-        handleCodeInApp: true
-      };
-
+      // Save OTP to Firestore with 10 min expiry
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
       try {
-        // Use Firebase to send a sign-in link that also shows the OTP
-        // We will show the OTP on screen for simplicity since we stored it
-        // For production: use EmailJS or a backend to send custom email
+        await db.collection('email_otps').doc(email).set({
+          otp:       generatedOTP,
+          email:     email,
+          expiresAt: firebase.firestore.Timestamp.fromDate(expiresAt),
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          used:      false
+        });
+      } catch(e) {
+        showAlert('auth-alert', 'Failed to prepare OTP. Please try again.', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Send OTP to Email';
+        return;
+      }
 
-        // Show OTP on screen (development friendly)
-        // AND try to send via Firebase sign-in link as backup
-        try {
-          await auth.sendSignInLinkToEmail(email, actionCodeSettings);
-          localStorage.setItem('emailForSignIn', email);
-        } catch(emailErr) {
-          console.log('Email link error (non-critical):', emailErr.message);
-        }
+      // Send OTP to email via EmailJS
+      try {
+        await emailjs.send(
+          'quizforge_service',   // Service ID
+          'quizforge_otp',       // Template ID
+          {
+            to_email: email,     // matches {{to_email}} in template
+            otp:      generatedOTP, // matches {{otp}} in template
+            email:    email      // extra variable in case template uses {{email}}
+          }
+        );
 
-        // Show step 2 with OTP displayed
+        // Success — show OTP input step
         document.getElementById('otp-step-1').style.display = 'none';
         document.getElementById('otp-step-2').style.display = '';
-        document.getElementById('otp-sent-to').textContent = email;
+        document.getElementById('otp-sent-to').textContent  = email;
         document.getElementById('otp-0').focus();
-
-        // Show OTP in alert for easy testing
-        // In production, remove this line after EmailJS is set up
-        showAlert('auth-alert',
-          `✓ OTP generated! Your OTP is: <strong style="font-size:1.2rem;letter-spacing:0.2em;">${generatedOTP}</strong><br><small>In production, this would be sent to your email.</small>`,
-          'success');
-
+        showAlert('auth-alert', '✓ OTP sent to your email! Check inbox and spam folder.', 'success');
         startOTPExpireTimer();
         startResendTimer();
-
         btn.disabled = false;
         btn.textContent = 'Send OTP to Email';
 
-      } catch (e) {
-        showAlert('auth-alert', 'Failed to send OTP. Please try again.', 'error');
+      } catch(e) {
+        console.error('EmailJS error:', e);
+        showAlert('auth-alert', 'Failed to send email. Check your EmailJS setup.', 'error');
         btn.disabled = false;
         btn.textContent = 'Send OTP to Email';
       }
