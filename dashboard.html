@@ -169,13 +169,46 @@
     let questionCount = 0;
 
     document.addEventListener('DOMContentLoaded', () => {
-      // Wait for Firebase to restore session — critical for OTP login
-      auth.onAuthStateChanged(async user => {
-        if (!user) {
-          window.location.href = 'login.html';
-          return;
+      // onAuthStateChanged is the ONLY reliable way to check auth
+      // It fires once when Firebase restores session from storage
+      // Give Firebase 3 seconds to restore session before redirecting
+      let authResolved = false;
+      const authTimeout = setTimeout(() => {
+        if (!authResolved) {
+          // Check localStorage backup set by OTP login
+          const uid = localStorage.getItem('qf_uid');
+          if (!uid) {
+            window.location.href = 'login.html';
+          }
+          // If uid exists, wait a bit more for Firebase to catch up
         }
-        currentUser = user;
+      }, 3000);
+
+      auth.onAuthStateChanged(async user => {
+        authResolved = true;
+        clearTimeout(authTimeout);
+        if (!user) {
+          // Double check localStorage — OTP login may have just completed
+          const uid = localStorage.getItem('qf_uid');
+          if (!uid) {
+            window.location.href = 'login.html';
+            return;
+          }
+          // Wait one more second for Firebase session
+          await new Promise(r => setTimeout(r, 1000));
+          if (!auth.currentUser) {
+            localStorage.removeItem('qf_uid');
+            localStorage.removeItem('qf_email');
+            window.location.href = 'login.html';
+            return;
+          }
+          currentUser = auth.currentUser;
+        } else {
+          currentUser = user;
+          // Clear backup since Firebase is working
+          localStorage.removeItem('qf_uid');
+          localStorage.removeItem('qf_email');
+        }
       // Load user profile from Firestore to show name
       const userDoc = await db.collection('users').doc(currentUser.uid).get();
       if (userDoc.exists) {

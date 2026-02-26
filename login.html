@@ -503,14 +503,25 @@
         clearTimers();
         showAlert('auth-alert', '✓ OTP verified! Redirecting…', 'success');
 
-        // Wait for auth state to fully persist before navigating
-        // This prevents the redirect loop
+        // Store a flag so dashboard knows login just happened
+        const loggedInUser = auth.currentUser;
+        localStorage.setItem('qf_uid', loggedInUser.uid);
+        localStorage.setItem('qf_email', loggedInUser.email || otpEmail);
+
+        // Wait for onAuthStateChanged to confirm session is saved
         await new Promise(resolve => {
+          let done = false;
           const unsub = auth.onAuthStateChanged(user => {
-            if (user) { unsub(); resolve(); }
+            if (user && !done) {
+              done = true;
+              unsub();
+              resolve();
+            }
           });
-          setTimeout(resolve, 4000); // max wait 4 seconds
+          // Hard fallback after 5 seconds
+          setTimeout(() => { if(!done){ done=true; resolve(); } }, 5000);
         });
+
         window.location.replace('dashboard.html');
 
       } catch(e) {
