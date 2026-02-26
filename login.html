@@ -436,34 +436,56 @@
       // OTP is correct! Mark as used
       await db.collection('email_otps').doc(otpEmail).update({ used: true });
 
-      // Sign in using Firebase — use email + fixed secret password
-      // The password is always the same for OTP users (they never see it)
-      const otpPass = 'QuizForge_OTP_' + btoa(otpEmail).replace(/[^a-zA-Z0-9]/g,'').slice(0,16);
+      // Use a consistent password based on email
+      const otpPass = 'QF_' + btoa(otpEmail).replace(/[^a-zA-Z0-9]/g,'').slice(0,20) + '_otp';
 
       try {
-        // First try to sign in (user already exists)
+        // STEP 1: Try signing in
         try {
           await auth.signInWithEmailAndPassword(otpEmail, otpPass);
+          // ✅ Sign in worked
         } catch(signInErr) {
-          if (
-            signInErr.code === 'auth/user-not-found' ||
+
+          if (signInErr.code === 'auth/user-not-found') {
+            // Brand new user — create account
+            const newUser = await auth.createUserWithEmailAndPassword(otpEmail, otpPass);
+            const uid     = newUser.user.uid;
+            const uname   = otpEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g,'');
+            await db.collection('users').doc(uid).set({
+              uid, firstName:'', lastName:'', fullName:'',
+              username: uname, email: otpEmail, phone:'',
+              createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+          } else if (
             signInErr.code === 'auth/wrong-password' ||
             signInErr.code === 'auth/invalid-credential' ||
             signInErr.code === 'auth/invalid-login-credentials'
           ) {
-            // New user — create account first
-            const newUser = await auth.createUserWithEmailAndPassword(otpEmail, otpPass);
-            // Save basic profile to Firestore
-            const uid   = newUser.user.uid;
-            const uDoc  = await db.collection('users').doc(uid).get();
-            if (!uDoc.exists) {
-              const uname = otpEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g,'');
-              await db.collection('users').doc(uid).set({
-                uid, firstName:'', lastName:'', fullName:'',
-                username: uname, email: otpEmail, phone:'',
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-              });
-            }
+            // User exists but has a different password
+            // Since they verified OTP we trust them — reset their password
+            btn.innerHTML = '<span class="spinner"></span> Updating account…';
+            await auth.sendPasswordResetEmail(otpEmail);
+
+            // Save new password using admin trick:
+            // Sign in with the reset link is not possible client-side
+            // So we use a workaround — store verified status in Firestore
+            // and sign in after password update
+            await db.collection('email_otps').doc(otpEmail).set({
+              verified:   true,
+              newPass:    otpPass,
+              verifiedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            // Show message to user
+            clearTimers();
+            showAlert('auth-alert',
+              '✅ OTP verified! Since your account already exists with a different password, we sent a <strong>password reset email</strong> to <strong>' + otpEmail + '</strong>.<br><br>Click the reset link → set your new password → come back and log in.',
+              'success');
+            btn.disabled    = false;
+            btn.textContent = 'Verify & Login';
+            return;
+
           } else {
             throw signInErr;
           }
