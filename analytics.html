@@ -5,47 +5,29 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Analytics — QuizForge</title>
   <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- Chart.js for visualizations -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
-  <!-- NAVBAR -->
   <nav class="navbar">
     <a href="dashboard.html" class="logo">Quiz<span>Forge</span></a>
     <div class="navbar-links">
       <a href="dashboard.html" class="btn btn-ghost btn-sm">← Dashboard</a>
       <div class="theme-toggle">
-        <label class="toggle-switch">
-          <input type="checkbox" class="dark-toggle-input" />
-          <span class="toggle-slider"></span>
-        </label>
+        <label class="toggle-switch"><input type="checkbox" class="dark-toggle-input" /><span class="toggle-slider"></span></label>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="handleLogout()">Logout</button>
     </div>
   </nav>
-
   <main class="page">
     <div class="container">
-      <!-- Header -->
       <div class="dashboard-header animate-in">
-        <div>
-          <h1>Analytics</h1>
-          <p>Track performance and engagement across all your quizzes.</p>
-        </div>
+        <div><h1>Analytics</h1><p>Track performance across all your quizzes.</p></div>
       </div>
-
-      <!-- Loading -->
       <div id="analytics-loading" style="text-align:center;padding:3rem;">
         <div class="spinner" style="width:32px;height:32px;margin:0 auto;"></div>
       </div>
-
-      <!-- Content -->
       <div id="analytics-content" style="display:none;">
-        <!-- Overview Stats -->
         <div class="analytics-grid" id="overview-stats"></div>
-
-        <!-- Quiz selector -->
         <div class="card" style="margin-bottom:1.5rem;">
           <div class="card-header">
             <h4>Quiz Performance</h4>
@@ -56,24 +38,13 @@
             </div>
           </div>
           <div class="card-body" id="quiz-detail-content">
-            <div class="empty-state" style="padding:2rem;">
-              <div class="empty-icon">📊</div>
-              <p>Select a quiz to view its analytics</p>
-            </div>
+            <div class="empty-state" style="padding:2rem;"><div class="empty-icon">📊</div><p>Select a quiz to view its analytics</p></div>
           </div>
         </div>
-
-        <!-- Chart -->
         <div class="card" id="chart-card" style="margin-bottom:1.5rem;display:none;">
           <div class="card-header"><h4>Score Distribution</h4></div>
-          <div class="card-body">
-            <div class="chart-container">
-              <canvas id="score-chart"></canvas>
-            </div>
-          </div>
+          <div class="card-body"><div class="chart-container"><canvas id="score-chart"></canvas></div></div>
         </div>
-
-        <!-- Response History -->
         <div class="card" id="history-card" style="display:none;">
           <div class="card-header">
             <h4>Response History</h4>
@@ -81,36 +52,23 @@
           </div>
           <div class="table-wrap">
             <table>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Date</th>
-                  <th>Score</th>
-                  <th>Total Qs</th>
-                  <th>Percentage</th>
-                  <th>Grade</th>
-                </tr>
-              </thead>
+              <thead><tr><th>#</th><th>Date</th><th>Score</th><th>Total Qs</th><th>Percentage</th><th>Grade</th></tr></thead>
               <tbody id="responses-table"></tbody>
             </table>
           </div>
         </div>
-
-        <!-- Empty state -->
         <div id="no-quizzes" style="display:none;">
-          <div class="empty-state">
-            <div class="empty-icon">📈</div>
-            <h3>No quizzes yet</h3>
-            <p>Create some quizzes to start seeing analytics here.</p>
-            <a href="dashboard.html" class="btn btn-primary" style="margin-top:1rem;">+ Create Quiz</a>
-          </div>
+          <div class="empty-state"><div class="empty-icon">📈</div><h3>No quizzes yet</h3><p>Create some quizzes to see analytics.</p><a href="dashboard.html" class="btn btn-primary" style="margin-top:1rem;">+ Create Quiz</a></div>
         </div>
       </div>
     </div>
   </main>
 
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="firebase.js"></script>
   <script src="script.js"></script>
-  <script src="supabase.js"></script>
   <script>
     let analyticsData = [];
     let scoreChartInstance = null;
@@ -118,60 +76,27 @@
     document.addEventListener('DOMContentLoaded', async () => {
       const user = await requireAuth();
       if (!user) return;
-
-      // Check if deep-linking to a specific quiz
-      const params = new URLSearchParams(location.search);
-      const targetQuizId = params.get('quiz');
-
-      analyticsData = await getAnalytics(user.id);
-
+      const targetQuizId = new URLSearchParams(location.search).get('quiz');
+      analyticsData = await getAnalytics(user.uid);
       document.getElementById('analytics-loading').style.display = 'none';
       document.getElementById('analytics-content').style.display = '';
-
-      if (analyticsData.length === 0) {
-        document.getElementById('no-quizzes').style.display = '';
-        return;
-      }
-
+      if (analyticsData.length === 0) { document.getElementById('no-quizzes').style.display = ''; return; }
       renderOverview();
       populateSelector(targetQuizId);
-
-      if (targetQuizId) {
-        const sel = document.getElementById('quiz-selector');
-        sel.value = targetQuizId;
-        onQuizSelect();
-      }
+      if (targetQuizId) { document.getElementById('quiz-selector').value = targetQuizId; onQuizSelect(); }
     });
 
-    async function handleLogout() {
-      await signOut();
-      window.location.href = 'login.html';
-    }
+    async function handleLogout() { await signOut(); window.location.href = 'login.html'; }
 
-    // ── OVERVIEW ─────────────────────────────────────────────
     function renderOverview() {
-      const totalQuizzes = analyticsData.length;
       const totalAttempts = analyticsData.reduce((s, d) => s + d.attempts, 0);
-      const overallAvg = analyticsData.length > 0 && totalAttempts > 0
-        ? Math.round(analyticsData.reduce((s, d) => s + (d.avgScore * d.attempts), 0) / totalAttempts)
-        : 0;
-
+      const overallAvg = totalAttempts > 0 ? Math.round(analyticsData.reduce((s, d) => s + (d.avgScore * d.attempts), 0) / totalAttempts) : 0;
       document.getElementById('overview-stats').innerHTML = `
-        <div class="card card-hover animate-in" style="padding:1.5rem;">
-          <div class="stat-label">Total Quizzes</div>
-          <div class="stat-value" style="margin-top:0.35rem;">${totalQuizzes}</div>
-        </div>
-        <div class="card card-hover animate-in animate-delay-1" style="padding:1.5rem;">
-          <div class="stat-label">Total Attempts</div>
-          <div class="stat-value" style="margin-top:0.35rem;">${totalAttempts}</div>
-        </div>
-        <div class="card card-hover animate-in animate-delay-2" style="padding:1.5rem;">
-          <div class="stat-label">Overall Avg Score</div>
-          <div class="stat-value" style="margin-top:0.35rem;">${overallAvg}%</div>
-        </div>`;
+        <div class="card card-hover animate-in" style="padding:1.5rem;"><div class="stat-label">Total Quizzes</div><div class="stat-value" style="margin-top:0.35rem;">${analyticsData.length}</div></div>
+        <div class="card card-hover animate-in animate-delay-1" style="padding:1.5rem;"><div class="stat-label">Total Attempts</div><div class="stat-value" style="margin-top:0.35rem;">${totalAttempts}</div></div>
+        <div class="card card-hover animate-in animate-delay-2" style="padding:1.5rem;"><div class="stat-label">Overall Avg Score</div><div class="stat-value" style="margin-top:0.35rem;">${overallAvg}%</div></div>`;
     }
 
-    // ── SELECTOR ──────────────────────────────────────────────
     function populateSelector(selectedId) {
       const sel = document.getElementById('quiz-selector');
       analyticsData.forEach(d => {
@@ -183,117 +108,59 @@
       });
     }
 
-    // ── QUIZ DETAIL ──────────────────────────────────────────
     function onQuizSelect() {
       const quizId = document.getElementById('quiz-selector').value;
       if (!quizId) return;
-
       const data = analyticsData.find(d => d.quiz.id === quizId);
       if (!data) return;
-
-      const { quiz, attempts, avgScore, highestScore, responses } = data;
-
-      // Stats
+      const { attempts, avgScore, highestScore, responses } = data;
       document.getElementById('quiz-detail-content').innerHTML = `
         <div class="grid-3" style="gap:1rem;">
-          <div style="text-align:center;padding:1rem;">
-            <div class="stat-value">${attempts}</div>
-            <div class="stat-label">Attempts</div>
-          </div>
-          <div style="text-align:center;padding:1rem;">
-            <div class="stat-value">${attempts > 0 ? Math.round(avgScore) + '%' : '–'}</div>
-            <div class="stat-label">Avg Score</div>
-          </div>
-          <div style="text-align:center;padding:1rem;">
-            <div class="stat-value">${attempts > 0 ? Math.round(highestScore) + '%' : '–'}</div>
-            <div class="stat-label">Highest Score</div>
-          </div>
+          <div style="text-align:center;padding:1rem;"><div class="stat-value">${attempts}</div><div class="stat-label">Attempts</div></div>
+          <div style="text-align:center;padding:1rem;"><div class="stat-value">${attempts > 0 ? Math.round(avgScore) + '%' : '–'}</div><div class="stat-label">Avg Score</div></div>
+          <div style="text-align:center;padding:1rem;"><div class="stat-value">${attempts > 0 ? Math.round(highestScore) + '%' : '–'}</div><div class="stat-label">Highest Score</div></div>
         </div>`;
-
-      // Chart
       if (attempts > 0) {
         document.getElementById('chart-card').style.display = '';
         renderChart(responses);
-      } else {
-        document.getElementById('chart-card').style.display = 'none';
-      }
-
-      // Response table
-      if (attempts > 0) {
         document.getElementById('history-card').style.display = '';
         document.getElementById('response-count').textContent = `${responses.length} response${responses.length !== 1 ? 's' : ''}`;
         document.getElementById('responses-table').innerHTML = responses.map((r, i) => {
           const grade = r.percentage >= 90 ? 'A' : r.percentage >= 75 ? 'B' : r.percentage >= 60 ? 'C' : r.percentage >= 50 ? 'D' : 'F';
-          const gradeColor = r.percentage >= 75 ? 'var(--success)' : r.percentage >= 50 ? 'var(--warning)' : 'var(--danger)';
-          return `<tr>
-            <td style="color:var(--text-muted);">${i + 1}</td>
-            <td>${formatDate(r.created_at)}</td>
-            <td><strong>${r.score}</strong></td>
-            <td>${r.total_questions}</td>
-            <td>${Math.round(r.percentage)}%</td>
-            <td><span class="badge" style="background:${gradeColor}22;color:${gradeColor};">${grade}</span></td>
-          </tr>`;
+          const gc = r.percentage >= 75 ? 'var(--success)' : r.percentage >= 50 ? 'var(--warning)' : 'var(--danger)';
+          return `<tr><td style="color:var(--text-muted);">${i+1}</td><td>${formatTimestamp(r.created_at)}</td><td><strong>${r.score}</strong></td><td>${r.total_questions}</td><td>${Math.round(r.percentage)}%</td><td><span class="badge" style="background:${gc}22;color:${gc};">${grade}</span></td></tr>`;
         }).join('');
       } else {
+        document.getElementById('chart-card').style.display = 'none';
         document.getElementById('history-card').style.display = 'none';
       }
     }
 
-    // ── CHART ─────────────────────────────────────────────────
     function renderChart(responses) {
       const ctx = document.getElementById('score-chart').getContext('2d');
-
-      // Bucket into ranges: 0-20, 21-40, 41-60, 61-80, 81-100
-      const buckets = [0, 0, 0, 0, 0];
+      const buckets = [0,0,0,0,0];
       responses.forEach(r => {
-        const pct = r.percentage;
-        if (pct <= 20) buckets[0]++;
-        else if (pct <= 40) buckets[1]++;
-        else if (pct <= 60) buckets[2]++;
-        else if (pct <= 80) buckets[3]++;
+        if (r.percentage <= 20) buckets[0]++;
+        else if (r.percentage <= 40) buckets[1]++;
+        else if (r.percentage <= 60) buckets[2]++;
+        else if (r.percentage <= 80) buckets[3]++;
         else buckets[4]++;
       });
-
       if (scoreChartInstance) scoreChartInstance.destroy();
-
       const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-      const textColor = isDark ? '#a09d98' : '#6b6865';
-      const gridColor = isDark ? '#2e2b28' : '#e4e2de';
-
       scoreChartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
-          labels: ['0–20%', '21–40%', '41–60%', '61–80%', '81–100%'],
-          datasets: [{
-            label: 'Respondents',
-            data: buckets,
-            backgroundColor: [
-              'rgba(232,64,64,0.7)',
-              'rgba(245,166,35,0.7)',
-              'rgba(45,107,228,0.7)',
-              'rgba(45,174,110,0.7)',
-              'rgba(232,93,38,0.85)',
-            ],
-            borderRadius: 8,
-            borderSkipped: false,
-          }]
+          labels: ['0–20%','21–40%','41–60%','61–80%','81–100%'],
+          datasets: [{ label: 'Respondents', data: buckets,
+            backgroundColor: ['rgba(232,64,64,0.7)','rgba(245,166,35,0.7)','rgba(45,107,228,0.7)','rgba(45,174,110,0.7)','rgba(232,93,38,0.85)'],
+            borderRadius: 8, borderSkipped: false }]
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-          },
+        options: { responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
           scales: {
-            y: {
-              beginAtZero: true,
-              ticks: { color: textColor, stepSize: 1 },
-              grid: { color: gridColor },
-            },
-            x: {
-              ticks: { color: textColor },
-              grid: { display: false },
-            }
+            y: { beginAtZero: true, ticks: { color: isDark ? '#a09d98' : '#6b6865', stepSize: 1 }, grid: { color: isDark ? '#2e2b28' : '#e4e2de' } },
+            x: { ticks: { color: isDark ? '#a09d98' : '#6b6865' }, grid: { display: false } }
           }
         }
       });
