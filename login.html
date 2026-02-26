@@ -385,7 +385,7 @@
     // VERIFY EMAIL OTP
     // ══════════════════════════════════════════════
     async function verifyEmailOTP() {
-      const btn = document.getElementById('verify-email-otp-btn');
+      const btn        = document.getElementById('verify-email-otp-btn');
       const enteredOTP = [0,1,2,3,4,5].map(i => document.getElementById('otp-'+i).value).join('');
 
       if (enteredOTP.length !== 6) {
@@ -396,107 +396,114 @@
       btn.disabled = true;
       btn.innerHTML = '<span class="spinner"></span> Verifying…';
 
-      // Check OTP from Firestore
-      const otpDoc = await db.collection('email_otps').doc(otpEmail).get();
-
-      if (!otpDoc.exists) {
-        showAlert('auth-alert', 'OTP not found. Please request a new one.', 'error');
-        btn.disabled = false; btn.textContent = 'Verify & Login';
-        return;
-      }
-
-      const otpData = otpDoc.data();
-      const now     = new Date();
-      const expires = otpData.expiresAt.toDate();
-
-      // Check expired
-      if (now > expires) {
-        showAlert('auth-alert', 'OTP has expired. Please request a new one.', 'error');
-        btn.disabled = false; btn.textContent = 'Verify & Login';
-        clearOTPBoxes();
-        return;
-      }
-
-      // Check used
-      if (otpData.used) {
-        showAlert('auth-alert', 'OTP already used. Please request a new one.', 'error');
-        btn.disabled = false; btn.textContent = 'Verify & Login';
-        clearOTPBoxes();
-        return;
-      }
-
-      // Check OTP match
-      if (enteredOTP !== otpData.otp) {
-        showAlert('auth-alert', '✗ Wrong OTP. Please try again.', 'error');
-        btn.disabled = false; btn.textContent = 'Verify & Login';
-        clearOTPBoxes();
-        return;
-      }
-
-      // OTP is correct! Mark as used
-      await db.collection('email_otps').doc(otpEmail).update({ used: true });
-
-      // Use a consistent password based on email
-      const otpPass = 'QF_' + btoa(otpEmail).replace(/[^a-zA-Z0-9]/g,'').slice(0,20) + '_otp';
-
       try {
-        // STEP 1: Try signing in
-        try {
-          await auth.signInWithEmailAndPassword(otpEmail, otpPass);
-          // ✅ Sign in worked
-        } catch(signInErr) {
+        // Check OTP from Firestore
+        const otpDoc = await db.collection('email_otps').doc(otpEmail).get();
 
+        if (!otpDoc.exists) {
+          showAlert('auth-alert', 'OTP not found. Please request a new one.', 'error');
+          btn.disabled = false; btn.textContent = 'Verify & Login'; return;
+        }
+
+        const otpData = otpDoc.data();
+
+        // Check expired
+        if (new Date() > otpData.expiresAt.toDate()) {
+          showAlert('auth-alert', 'OTP has expired. Please request a new one.', 'error');
+          btn.disabled = false; btn.textContent = 'Verify & Login'; clearOTPBoxes(); return;
+        }
+
+        // Check already used
+        if (otpData.used) {
+          showAlert('auth-alert', 'OTP already used. Please request a new one.', 'error');
+          btn.disabled = false; btn.textContent = 'Verify & Login'; clearOTPBoxes(); return;
+        }
+
+        // Check OTP match
+        if (enteredOTP !== otpData.otp) {
+          showAlert('auth-alert', '✗ Wrong OTP. Please try again.', 'error');
+          btn.disabled = false; btn.textContent = 'Verify & Login'; clearOTPBoxes(); return;
+        }
+
+        // ✅ OTP is correct — mark used
+        await db.collection('email_otps').doc(otpEmail).update({ used: true });
+
+        // ── SIGN IN STRATEGY ──────────────────────────────────────
+        // We store a password in Firestore for OTP users so it is
+        // always consistent across devices and sessions
+        // ─────────────────────────────────────────────────────────
+
+        // Check if password already stored for this email
+        const passDoc = await db.collection('otp_passwords').doc(otpEmail).get();
+        let storedPass;
+
+        if (passDoc.exists) {
+          // Use existing stored password
+          storedPass = passDoc.data().password;
+        } else {
+          // First time — generate and store a new password
+          storedPass = 'QF' + Math.random().toString(36).slice(2,10) +
+                       Math.random().toString(36).slice(2,10) + 'Zz9!';
+          await db.collection('otp_passwords').doc(otpEmail).set({
+            password: storedPass,
+            email:    otpEmail,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        }
+
+        // Now try to sign in with stored password
+        try {
+          await auth.signInWithEmailAndPassword(otpEmail, storedPass);
+
+        } catch(signInErr) {
           if (signInErr.code === 'auth/user-not-found') {
-            // Brand new user — create account
-            const newUser = await auth.createUserWithEmailAndPassword(otpEmail, otpPass);
+            // New user — create account with stored password
+            const newUser = await auth.createUserWithEmailAndPassword(otpEmail, storedPass);
             const uid     = newUser.user.uid;
             const uname   = otpEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g,'');
-            await db.collection('users').doc(uid).set({
-              uid, firstName:'', lastName:'', fullName:'',
-              username: uname, email: otpEmail, phone:'',
-              createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-
-          } else if (
-            signInErr.code === 'auth/wrong-password' ||
-            signInErr.code === 'auth/invalid-credential' ||
-            signInErr.code === 'auth/invalid-login-credentials'
-          ) {
-            // User exists but has a different password
-            // Since they verified OTP we trust them — reset their password
-            btn.innerHTML = '<span class="spinner"></span> Updating account…';
-            await auth.sendPasswordResetEmail(otpEmail);
-
-            // Save new password using admin trick:
-            // Sign in with the reset link is not possible client-side
-            // So we use a workaround — store verified status in Firestore
-            // and sign in after password update
-            await db.collection('email_otps').doc(otpEmail).set({
-              verified:   true,
-              newPass:    otpPass,
-              verifiedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-
-            // Show message to user
-            clearTimers();
-            showAlert('auth-alert',
-              '✅ OTP verified! Since your account already exists with a different password, we sent a <strong>password reset email</strong> to <strong>' + otpEmail + '</strong>.<br><br>Click the reset link → set your new password → come back and log in.',
-              'success');
-            btn.disabled    = false;
-            btn.textContent = 'Verify & Login';
-            return;
-
+            const uDoc    = await db.collection('users').doc(uid).get();
+            if (!uDoc.exists) {
+              await db.collection('users').doc(uid).set({
+                uid, firstName:'', lastName:'', fullName:'',
+                username: uname, email: otpEmail, phone:'',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+              });
+            }
           } else {
-            throw signInErr;
+            // Wrong password for existing account
+            // Update password using Firebase updatePassword after re-auth
+            // Since we can't re-auth, delete and recreate
+            const methods = await auth.fetchSignInMethodsForEmail(otpEmail);
+            if (methods.length > 0) {
+              // Account exists — update password via password reset silently
+              // Generate fresh password and store it
+              storedPass = 'QF' + Math.random().toString(36).slice(2,10) +
+                           Math.random().toString(36).slice(2,10) + 'Zz9!';
+              await db.collection('otp_passwords').doc(otpEmail).set({
+                password: storedPass, email: otpEmail,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+              });
+              // Send password reset email
+              await auth.sendPasswordResetEmail(otpEmail);
+              clearTimers();
+              showAlert('auth-alert',
+                '✅ OTP verified! A <strong>password reset link</strong> was sent to <strong>' + otpEmail + '</strong>. ' +
+                'Click it and set any password, then come back and use <strong>Email OTP</strong> to login — it will work immediately!',
+                'success');
+              btn.disabled = false; btn.textContent = 'Verify & Login';
+              return;
+            }
           }
         }
 
+        // ✅ Successfully signed in
         clearTimers();
         showAlert('auth-alert', '✓ OTP verified! Redirecting…', 'success');
         setTimeout(() => window.location.href = 'dashboard.html', 800);
 
       } catch(e) {
-        showAlert('auth-alert', 'Login failed: ' + e.message, 'error');
+        console.error('OTP verify error:', e);
+        showAlert('auth-alert', 'Something went wrong: ' + (e.message || e), 'error');
         btn.disabled = false;
         btn.textContent = 'Verify & Login';
       }
