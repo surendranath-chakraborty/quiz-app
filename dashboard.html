@@ -546,15 +546,15 @@
       const email = currentUser.email;
       if (!email) { showToast('No email found for this account.', 'error'); return; }
 
-      showToast('Sending reset email…');
-
-      // Generate a reset OTP and save to Firestore
-      const resetOTP  = Math.floor(100000 + Math.random() * 900000).toString();
-      const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 mins
+      const btn = event?.target;
+      showToast('Sending OTP to ' + email + '…');
 
       try {
-        // Save reset OTP to Firestore
-        await db.collection('email_otps').doc(email).set({
+        // Generate OTP and save to Firestore
+        const resetOTP  = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+
+        await db.collection('email_otps').doc('reset_' + email).set({
           otp:       resetOTP,
           email:     email,
           expiresAt: firebase.firestore.Timestamp.fromDate(expiresAt),
@@ -563,28 +563,27 @@
           type:      'password_reset'
         });
 
-        // Try Firebase built-in reset first
-        try {
-          await auth.sendPasswordResetEmail(email);
-          showToast('✓ Password reset email sent to ' + email + '. Check inbox & spam!');
-          return;
-        } catch(firebaseErr) {
-          console.log('Firebase reset failed, using EmailJS:', firebaseErr.code);
-        }
-
-        // Fallback: send via EmailJS with the OTP
+        // Send OTP via EmailJS
         await emailjs.send('quizforge_service', 'quizforge_otp', {
           to_email: email,
           email:    email,
-          otp:      resetOTP,
-          subject:  'QuizForge Password Reset OTP'
+          otp:      resetOTP
         });
 
-        showToast('✓ Password reset OTP sent to ' + email + '. Use it on login page!');
+        showToast('✓ OTP sent to ' + email + '! Redirecting…');
+
+        // Log out and redirect to login forgot page after 1.5 seconds
+        setTimeout(async () => {
+          await auth.signOut();
+          localStorage.removeItem('qf_uid');
+          localStorage.removeItem('qf_email');
+          // Pass email so forgot form is pre-filled
+          window.location.href = 'login.html?forgot=' + encodeURIComponent(email);
+        }, 1500);
 
       } catch(e) {
-        console.error('Reset email error:', e);
-        showToast('Failed to send reset email: ' + e.message, 'error');
+        console.error('Reset OTP error:', e);
+        showToast('Failed to send OTP. Try again.', 'error');
       }
     }
 

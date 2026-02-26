@@ -249,6 +249,29 @@
   <script>
     auth.onAuthStateChanged(user => { if (user) window.location.href = 'dashboard.html'; });
 
+    // Auto-open forgot tab if redirected from dashboard with ?forgot=email
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      const forgotEmail = params.get('forgot');
+      if (forgotEmail) {
+        // Pre-fill the email and open forgot tab
+        switchTab('forgot');
+        document.getElementById('forgot-email').value = decodeURIComponent(forgotEmail);
+        showAlert('auth-alert',
+          '✓ OTP sent to <strong>' + decodeURIComponent(forgotEmail) + '</strong>! Enter it below.',
+          'success');
+        // Jump straight to OTP step since OTP was already sent
+        document.getElementById('forgot-step-1').style.display = 'none';
+        document.getElementById('forgot-step-2').style.display = '';
+        document.getElementById('forgot-otp-sent-to').textContent = decodeURIComponent(forgotEmail);
+        // Store email for verification
+        window._forgotEmailOverride = decodeURIComponent(forgotEmail);
+        document.getElementById('fotp-0').focus();
+        startFotpTimer();
+        startFotpResend();
+      }
+    })();
+
     // ── State ────────────────────────────────────
     let generatedOTP   = '';
     let otpEmail       = '';
@@ -333,7 +356,8 @@
       btn.innerHTML = '<span class="spinner"></span> Verifying…';
 
       try {
-        const doc  = await db.collection('email_otps').doc('reset_' + forgotEmail).get();
+        const _fe = window._forgotEmailOverride || forgotEmail;
+        const doc  = await db.collection('email_otps').doc('reset_' + _fe).get();
         if (!doc.exists)                          { showAlert('auth-alert','OTP not found. Request a new one.','error'); btn.disabled=false; btn.textContent='Verify OTP'; return; }
         const data = doc.data();
         if (new Date() > data.expiresAt.toDate()) { showAlert('auth-alert','OTP expired. Request a new one.','error');  btn.disabled=false; btn.textContent='Verify OTP'; clearFotpBoxes(); return; }
@@ -341,7 +365,9 @@
         if (entered !== data.otp)                 { showAlert('auth-alert','✗ Wrong OTP. Try again.','error');            btn.disabled=false; btn.textContent='Verify OTP'; clearFotpBoxes(); return; }
 
         // Mark used
-        await db.collection('email_otps').doc('reset_' + forgotEmail).update({ used: true });
+        const _fe2 = window._forgotEmailOverride || forgotEmail;
+        await db.collection('email_otps').doc('reset_' + _fe2).update({ used: true });
+        forgotEmail = _fe2;
         clearFotpTimers();
 
         // Move to step 3
