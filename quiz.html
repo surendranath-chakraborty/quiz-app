@@ -10,73 +10,330 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
   <script src="firebase.js"></script>
   <script src="script.js"></script>
+  <style>
+    /* ── Quiz layout ── */
+    .quiz-shell {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-primary);
+    }
+
+    /* ── Top bar ── */
+    .quiz-topbar {
+      position: sticky; top: 0; z-index: 100;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      padding: .6rem 1rem;
+      display: flex; align-items: center; gap: .75rem;
+    }
+    .quiz-topbar .qz-title {
+      font-weight: 700; font-size: .9rem;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      flex: 1; min-width: 0;
+    }
+    .quiz-topbar .qz-counter {
+      font-size: .8rem; color: var(--text-muted); white-space: nowrap;
+    }
+
+    /* ── Main body ── */
+    .quiz-body {
+      display: flex; flex: 1;
+      gap: 0; max-width: 1100px;
+      margin: 0 auto; width: 100%;
+      padding: 1.5rem 1rem;
+      align-items: flex-start;
+      gap: 1.5rem;
+    }
+    @media(max-width: 720px) {
+      .quiz-body { flex-direction: column; padding: 1rem .75rem; }
+      .quiz-nav-panel { order: 2; width: 100% !important; position: static !important; }
+    }
+
+    /* ── Question card ── */
+    .quiz-main { flex: 1; min-width: 0; }
+    .question-card {
+      background: var(--bg-secondary);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      margin-bottom: 1.25rem;
+    }
+    .q-badge {
+      display: inline-block;
+      background: var(--accent); color: #fff;
+      font-size: .72rem; font-weight: 700;
+      padding: .2rem .65rem; border-radius: 99px;
+      margin-bottom: .85rem; text-transform: uppercase; letter-spacing: .06em;
+    }
+    .q-text {
+      font-size: 1.15rem; font-weight: 600;
+      color: var(--text-primary); line-height: 1.55;
+      margin-bottom: 1.5rem;
+    }
+
+    /* ── Options ── */
+    .options-grid { display: flex; flex-direction: column; gap: .65rem; }
+    .quiz-opt {
+      display: flex; align-items: center; gap: .85rem;
+      padding: .85rem 1.1rem;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      background: var(--bg-input);
+      transition: all .15s;
+      font-size: .95rem;
+      text-align: left; width: 100%;
+      font-family: var(--font-body);
+      color: var(--text-primary);
+    }
+    .quiz-opt:hover:not(:disabled):not(.answered-opt) {
+      border-color: var(--accent);
+      background: rgba(232,93,38,.07);
+    }
+    .quiz-opt .opt-key {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--bg-secondary); border: 2px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: .85rem; flex-shrink: 0;
+      transition: all .15s;
+    }
+    /* Selected */
+    .quiz-opt.selected { border-color: var(--accent); background: rgba(232,93,38,.1); }
+    .quiz-opt.selected .opt-key { background: var(--accent); border-color: var(--accent); color: #fff; }
+    /* Correct */
+    .quiz-opt.correct { border-color: var(--success); background: rgba(25,135,84,.1); }
+    .quiz-opt.correct .opt-key { background: var(--success); border-color: var(--success); color: #fff; }
+    /* Wrong */
+    .quiz-opt.wrong { border-color: var(--danger); background: rgba(220,53,69,.1); }
+    .quiz-opt.wrong .opt-key { background: var(--danger); border-color: var(--danger); color: #fff; }
+    /* Answered (review mode — no hover effect) */
+    .quiz-opt.answered-opt { cursor: default; }
+
+    /* ── Bottom nav buttons ── */
+    .quiz-actions {
+      display: flex; gap: .75rem; align-items: center;
+      flex-wrap: wrap;
+    }
+    .mark-btn {
+      display: flex; align-items: center; gap: .4rem;
+      padding: .55rem .9rem; border-radius: var(--radius-sm);
+      border: 1.5px solid var(--warning);
+      color: var(--warning); background: transparent;
+      font-size: .82rem; font-weight: 600;
+      cursor: pointer; font-family: var(--font-body);
+      transition: all .15s;
+    }
+    .mark-btn.marked {
+      background: var(--warning); color: #000;
+    }
+    .mark-btn:hover { opacity: .85; }
+
+    /* ── Right nav panel ── */
+    .quiz-nav-panel {
+      width: 220px; flex-shrink: 0;
+      position: sticky; top: 80px;
+    }
+    .panel-card {
+      background: var(--bg-secondary);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+    }
+    .panel-title {
+      font-size: .75rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .07em;
+      color: var(--text-muted); margin-bottom: .85rem;
+    }
+
+    /* Question number grid */
+    .q-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: .4rem;
+      margin-bottom: 1rem;
+    }
+    .q-dot {
+      width: 100%; aspect-ratio: 1;
+      border-radius: 6px;
+      border: 2px solid var(--border);
+      background: var(--bg-input);
+      display: flex; align-items: center; justify-content: center;
+      font-size: .72rem; font-weight: 700;
+      cursor: pointer;
+      transition: all .15s;
+      color: var(--text-muted);
+    }
+    .q-dot:hover { border-color: var(--accent); color: var(--accent); }
+    .q-dot.current { border-color: var(--accent); background: var(--accent); color: #fff; }
+    .q-dot.answered { border-color: var(--success); background: rgba(25,135,84,.15); color: var(--success); }
+    .q-dot.marked   { border-color: var(--warning); background: rgba(255,193,7,.15); color: #b45309; }
+    .q-dot.answered.marked { border-color: var(--warning); background: rgba(255,193,7,.2); color: #b45309; }
+
+    /* Legend */
+    .legend { display: flex; flex-direction: column; gap: .4rem; margin-bottom: 1rem; }
+    .legend-item { display: flex; align-items: center; gap: .5rem; font-size: .75rem; color: var(--text-muted); }
+    .legend-dot {
+      width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0;
+    }
+    .ld-current  { background: var(--accent); }
+    .ld-answered { background: rgba(25,135,84,.3); border: 1.5px solid var(--success); }
+    .ld-marked   { background: rgba(255,193,7,.3); border: 1.5px solid var(--warning); }
+    .ld-blank    { background: var(--bg-input); border: 1.5px solid var(--border); }
+
+    /* Stats row */
+    .panel-stats { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin-bottom: 1rem; }
+    .ps-card {
+      background: var(--bg-input); border-radius: var(--radius-sm);
+      padding: .5rem .4rem; text-align: center;
+    }
+    .ps-num { font-size: 1.1rem; font-weight: 800; color: var(--text-primary); }
+    .ps-lbl { font-size: .65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
+
+    /* Timer inside panel */
+    .timer-panel {
+      display: flex; align-items: center; justify-content: center;
+      gap: .5rem; margin-bottom: 1rem;
+      background: var(--bg-input); border-radius: var(--radius-sm); padding: .6rem;
+    }
+    .timer-icon { font-size: 1.1rem; }
+    .timer-val { font-size: 1.3rem; font-weight: 800; font-family: var(--font-mono); color: var(--text-primary); }
+    .timer-val.urgent { color: var(--danger); animation: pulse .5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+  </style>
 </head>
 <body>
-  <div class="quiz-player">
+  <div class="quiz-shell">
+
+    <!-- Loading -->
     <div id="quiz-loading" class="loading-overlay">
       <div class="spinner" style="width:36px;height:36px;border-width:4px;"></div>
       <p style="color:var(--text-secondary);">Loading quiz…</p>
     </div>
+
+    <!-- Error -->
     <div id="quiz-error" style="display:none;min-height:100vh;" class="flex-center">
       <div style="text-align:center;padding:3rem;">
         <div style="font-size:3rem;margin-bottom:1rem;">😕</div>
         <h2>Quiz not found</h2>
-        <p style="margin:0.5rem 0 1.5rem;">This quiz link may be invalid or expired.</p>
+        <p style="margin:.5rem 0 1.5rem;">This quiz link may be invalid or expired.</p>
         <a href="index.html" class="btn btn-primary">← Back to Home</a>
       </div>
     </div>
-    <div id="quiz-header" class="quiz-player-header" style="display:none;">
-      <div class="theme-toggle" style="margin-right:auto;">
-        <label class="toggle-switch"><input type="checkbox" class="dark-toggle-input" /><span class="toggle-slider"></span></label>
-      </div>
-      <div style="flex:1;min-width:0;">
-        <div class="flex-between" style="margin-bottom:0.35rem;">
-          <span id="question-counter" style="font-size:0.8rem;font-weight:600;color:var(--text-secondary);"></span>
-          <span id="quiz-title-header" style="font-size:0.8rem;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;"></span>
-        </div>
-        <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%;"></div></div>
-      </div>
-      <div class="timer-circle" id="timer-wrap">
-        <svg viewBox="0 0 58 58" width="64" height="64">
-          <circle class="timer-bg" cx="29" cy="29" r="26"/>
-          <circle class="timer-fill" id="timer-fill" cx="29" cy="29" r="26"/>
-        </svg>
-        <div class="timer-text" id="timer-text"></div>
+
+    <!-- Top bar -->
+    <div id="quiz-header" class="quiz-topbar" style="display:none;">
+      <label class="toggle-switch" style="flex-shrink:0;">
+        <input type="checkbox" class="dark-toggle-input"/>
+        <span class="toggle-slider"></span>
+      </label>
+      <span class="qz-title" id="quiz-title-header"></span>
+      <span class="qz-counter" id="question-counter"></span>
+      <div class="progress-bar" style="width:120px;flex-shrink:0;">
+        <div class="progress-fill" id="progress-fill" style="width:0%;"></div>
       </div>
     </div>
-    <div id="quiz-content" style="display:none;flex:1;">
-      <div class="quiz-question-card">
-        <div class="question-number" id="q-number"></div>
-        <div class="question-text" id="q-text"></div>
-        <div class="quiz-options" id="quiz-options"></div>
+
+    <!-- Quiz body -->
+    <div id="quiz-content" class="quiz-body" style="display:none;">
+
+      <!-- LEFT: Question + options -->
+      <div class="quiz-main">
+        <div class="question-card">
+          <div class="q-badge" id="q-badge">Question 1</div>
+          <div class="q-text" id="q-text"></div>
+          <div class="options-grid" id="quiz-options"></div>
+        </div>
+
+        <!-- Action row -->
+        <div class="quiz-actions">
+          <button class="btn btn-ghost btn-sm" id="prev-btn" onclick="goToPrev()" style="display:none;">← Previous</button>
+          <button class="mark-btn" id="mark-btn" onclick="toggleMark()">
+            🔖 Mark for Review
+          </button>
+          <div style="flex:1;"></div>
+          <button class="btn btn-secondary" id="skip-btn" onclick="skipQuestion()">Skip →</button>
+          <button class="btn btn-primary" id="next-btn" onclick="goToNext()">Next →</button>
+        </div>
       </div>
-      <div class="quiz-nav">
-        <button class="btn btn-primary" id="next-btn" onclick="nextQuestion()">Next →</button>
+
+      <!-- RIGHT: Navigation panel -->
+      <div class="quiz-nav-panel">
+        <div class="panel-card">
+          <div class="panel-title">Question Navigator</div>
+
+          <!-- Timer -->
+          <div class="timer-panel" id="timer-panel" style="display:none;">
+            <span class="timer-icon">⏱</span>
+            <span class="timer-val" id="timer-val">—</span>
+          </div>
+
+          <!-- Stats -->
+          <div class="panel-stats">
+            <div class="ps-card">
+              <div class="ps-num" id="stat-answered">0</div>
+              <div class="ps-lbl">Answered</div>
+            </div>
+            <div class="ps-card">
+              <div class="ps-num" id="stat-unanswered">0</div>
+              <div class="ps-lbl">Skipped</div>
+            </div>
+            <div class="ps-card">
+              <div class="ps-num" id="stat-marked">0</div>
+              <div class="ps-lbl">Marked</div>
+            </div>
+            <div class="ps-card">
+              <div class="ps-num" id="stat-total-p">0</div>
+              <div class="ps-lbl">Total</div>
+            </div>
+          </div>
+
+          <!-- Question number dots -->
+          <div class="q-grid" id="q-grid"></div>
+
+          <!-- Legend -->
+          <div class="legend">
+            <div class="legend-item"><div class="legend-dot ld-current"></div> Current</div>
+            <div class="legend-item"><div class="legend-dot ld-answered"></div> Answered</div>
+            <div class="legend-item"><div class="legend-dot ld-marked"></div> Marked for review</div>
+            <div class="legend-item"><div class="legend-dot ld-blank"></div> Not visited / Skipped</div>
+          </div>
+
+          <!-- Submit -->
+          <button class="btn btn-primary" style="width:100%;margin-top:.25rem;" onclick="confirmSubmit()">
+            Submit Quiz ✓
+          </button>
+        </div>
       </div>
+
     </div>
   </div>
 
   <script>
-    let quiz = null, questions = [], currentIndex = 0, answers = [], timerInterval = null, timeLeft = 0;
+    let quiz = null, questions = [], currentIndex = 0;
+    let answers = [];   // null = not answered, 'A'/'B'/'C'/'D' = answered
+    let marked  = [];   // true/false per question
+    let visited = [];   // true/false per question
+    let timerInterval = null, timeLeft = 0;
+    let playerName = 'Anonymous';
     const CIRCUMFERENCE = 2 * Math.PI * 26;
 
-    let playerName = 'Anonymous';
-
+    // ── Player name prompt ────────────────────────────
     function askPlayerName() {
       return new Promise(resolve => {
         const overlay = document.createElement('div');
         overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:9999;padding:1rem;';
         overlay.innerHTML = `
           <div style="background:var(--bg-secondary);border-radius:var(--radius);padding:2rem;max-width:380px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.4);">
-            <div style="font-size:3rem;margin-bottom:0.75rem;">🏆</div>
-            <h2 style="margin-bottom:0.4rem;font-size:1.4rem;color:var(--text-primary);">Enter Your Name</h2>
-            <p style="font-size:0.875rem;color:var(--text-muted);margin-bottom:1.25rem;">Your name will appear on the leaderboard!</p>
+            <div style="font-size:3rem;margin-bottom:.75rem;">🏆</div>
+            <h2 style="margin-bottom:.4rem;font-size:1.4rem;color:var(--text-primary);">Enter Your Name</h2>
+            <p style="font-size:.875rem;color:var(--text-muted);margin-bottom:1.25rem;">Your name will appear on the leaderboard!</p>
             <input id="player-name-input" class="form-input" type="text" placeholder="Your name..."
               maxlength="30" style="text-align:center;font-size:1.05rem;margin-bottom:1rem;"/>
-            <button id="start-now-btn" class="btn btn-primary" style="width:100%;font-size:1rem;padding:0.75rem 1rem;">
+            <button id="start-now-btn" class="btn btn-primary" style="width:100%;font-size:1rem;padding:.75rem 1rem;">
               Start Quiz 🚀
             </button>
-            <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.75rem;">Leave blank to play as Anonymous</p>
+            <p style="font-size:.75rem;color:var(--text-muted);margin-top:.75rem;">Leave blank to play as Anonymous</p>
           </div>`;
         document.body.appendChild(overlay);
         const inp = document.getElementById('player-name-input');
@@ -91,118 +348,272 @@
       });
     }
 
+    // ── Init ──────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', async () => {
-      const params = new URLSearchParams(location.search);
-      const quizId = params.get('id');
+      const params  = new URLSearchParams(location.search);
+      const quizId  = params.get('id');
       if (!quizId) { showError(); return; }
       const { data: quizData, error: qErr } = await getQuiz(quizId);
       if (qErr || !quizData) { showError(); return; }
       const { data: qs, error: qsErr } = await getQuizQuestions(quizId);
       if (qsErr || !qs || qs.length === 0) { showError('No questions found for this quiz.'); return; }
-      quiz = quizData; questions = qs; answers = new Array(questions.length).fill(null);
+      quiz      = quizData;
+      questions = qs;
+      answers   = new Array(questions.length).fill(null);
+      marked    = new Array(questions.length).fill(false);
+      visited   = new Array(questions.length).fill(false);
+
       document.title = quiz.title + ' — QuizForge';
       document.getElementById('quiz-loading').style.display = 'none';
-      // Ask player name before showing quiz
+
       await askPlayerName();
+
       document.getElementById('quiz-title-header').textContent = quiz.title;
-      document.getElementById('quiz-header').style.display = 'flex';
-      document.getElementById('quiz-content').style.display = 'block';
-      renderQuestion(0);
+      document.getElementById('stat-total-p').textContent      = questions.length;
+      document.getElementById('quiz-header').style.display     = 'flex';
+      document.getElementById('quiz-content').style.display    = 'flex';
+
+      buildGrid();
+      goToQuestion(0);
     });
 
     function showError(msg) {
       document.getElementById('quiz-loading').style.display = 'none';
-      document.getElementById('quiz-error').style.display = 'flex';
+      document.getElementById('quiz-error').style.display   = 'flex';
       if (msg) document.getElementById('quiz-error').querySelector('p').textContent = msg;
     }
 
-    function renderQuestion(index) {
-      const q = questions[index];
-      document.getElementById('question-counter').textContent = `${index + 1} / ${questions.length}`;
-      document.getElementById('progress-fill').style.width = ((index / questions.length) * 100) + '%';
-      document.getElementById('q-number').textContent = `Question ${index + 1}`;
-      document.getElementById('q-text').textContent = q.question_text;
-      const opts = [{ key:'A', text:q.option_a },{ key:'B', text:q.option_b },{ key:'C', text:q.option_c },{ key:'D', text:q.option_d }];
-      document.getElementById('quiz-options').innerHTML = opts.map(o => `
-        <button class="quiz-option ${answers[index] === o.key ? 'selected' : ''}"
-          onclick="selectAnswer('${o.key}')" id="opt-${o.key}" ${answers[index] !== null ? 'disabled' : ''}>
-          <span class="option-indicator">${o.key}</span>
-          <span>${o.text}</span>
-        </button>`).join('');
-      document.getElementById('next-btn').textContent = index === questions.length - 1 ? 'Submit Quiz ✓' : 'Next →';
-      clearTimer();
-      if (quiz.timer_seconds > 0) { document.getElementById('timer-wrap').style.visibility = 'visible'; startTimer(quiz.timer_seconds); }
-      else document.getElementById('timer-wrap').style.visibility = 'hidden';
+    // ── Question grid (right panel) ───────────────────
+    function buildGrid() {
+      const grid = document.getElementById('q-grid');
+      grid.innerHTML = questions.map((_, i) => `
+        <button class="q-dot" id="dot-${i}" onclick="goToQuestion(${i})">${i + 1}</button>
+      `).join('');
     }
 
+    function updateGrid() {
+      questions.forEach((_, i) => {
+        const dot = document.getElementById('dot-' + i);
+        if (!dot) return;
+        dot.className = 'q-dot';
+        if (i === currentIndex)    dot.classList.add('current');
+        if (answers[i] !== null)   dot.classList.add('answered');
+        if (marked[i])             dot.classList.add('marked');
+      });
+      // Update stats
+      const answeredCount  = answers.filter(a => a !== null).length;
+      const skippedCount   = visited.filter((v, i) => v && answers[i] === null).length;
+      const markedCount    = marked.filter(Boolean).length;
+      document.getElementById('stat-answered').textContent   = answeredCount;
+      document.getElementById('stat-unanswered').textContent = skippedCount;
+      document.getElementById('stat-marked').textContent     = markedCount;
+    }
+
+    // ── Navigate ──────────────────────────────────────
+    function goToQuestion(index) {
+      clearTimer();
+      visited[index] = true;
+      currentIndex   = index;
+      renderQuestion(index);
+      updateGrid();
+    }
+
+    function goToNext() {
+      if (currentIndex < questions.length - 1) goToQuestion(currentIndex + 1);
+      else confirmSubmit();
+    }
+
+    function goToPrev() {
+      if (currentIndex > 0) goToQuestion(currentIndex - 1);
+    }
+
+    function skipQuestion() {
+      // Mark as visited but no answer
+      visited[currentIndex] = true;
+      if (currentIndex < questions.length - 1) goToQuestion(currentIndex + 1);
+      else confirmSubmit();
+    }
+
+    // ── Mark for review ───────────────────────────────
+    function toggleMark() {
+      marked[currentIndex] = !marked[currentIndex];
+      const btn = document.getElementById('mark-btn');
+      if (marked[currentIndex]) {
+        btn.textContent = '🔖 Marked for Review';
+        btn.classList.add('marked');
+      } else {
+        btn.textContent = '🔖 Mark for Review';
+        btn.classList.remove('marked');
+      }
+      updateGrid();
+    }
+
+    // ── Render question ───────────────────────────────
+    function renderQuestion(index) {
+      const q          = questions[index];
+      const isAnswered = answers[index] !== null;
+      const total      = questions.length;
+
+      document.getElementById('q-badge').textContent          = `Question ${index + 1} of ${total}`;
+      document.getElementById('q-text').textContent           = q.question_text;
+      document.getElementById('question-counter').textContent = `${index + 1} / ${total}`;
+      document.getElementById('progress-fill').style.width    = (((index + 1) / total) * 100) + '%';
+
+      // Prev button
+      document.getElementById('prev-btn').style.display = index > 0 ? '' : 'none';
+
+      // Next/Submit button
+      const nextBtn = document.getElementById('next-btn');
+      nextBtn.textContent = index === total - 1 ? 'Submit Quiz ✓' : 'Next →';
+
+      // Skip button — hide if already answered
+      document.getElementById('skip-btn').style.display = isAnswered ? 'none' : '';
+
+      // Mark button state
+      const markBtn = document.getElementById('mark-btn');
+      if (marked[index]) {
+        markBtn.textContent = '🔖 Marked for Review';
+        markBtn.classList.add('marked');
+      } else {
+        markBtn.textContent = '🔖 Mark for Review';
+        markBtn.classList.remove('marked');
+      }
+
+      // Options
+      const opts = [
+        { key:'A', text: q.option_a },
+        { key:'B', text: q.option_b },
+        { key:'C', text: q.option_c },
+        { key:'D', text: q.option_d }
+      ];
+
+      document.getElementById('quiz-options').innerHTML = opts.map(o => {
+        let cls = 'quiz-opt';
+        if (isAnswered) {
+          cls += ' answered-opt';
+          if (o.key === q.correct_option)      cls += ' correct';
+          else if (o.key === answers[index])   cls += ' wrong';
+        } else if (o.key === answers[index]) {
+          cls += ' selected';
+        }
+        return `
+          <button class="${cls}" onclick="selectAnswer('${o.key}')"
+            ${isAnswered ? 'disabled' : ''}>
+            <span class="opt-key">${o.key}</span>
+            <span>${o.text}</span>
+          </button>`;
+      }).join('');
+
+      // Timer
+      clearTimer();
+      const timerPanel = document.getElementById('timer-panel');
+      if (quiz.timer_seconds > 0 && !isAnswered) {
+        timerPanel.style.display = 'flex';
+        startTimer(quiz.timer_seconds);
+      } else {
+        timerPanel.style.display = 'none';
+      }
+    }
+
+    // ── Select answer ─────────────────────────────────
     function selectAnswer(key) {
       if (answers[currentIndex] !== null) return;
       answers[currentIndex] = key;
-      const q = questions[currentIndex];
-      ['A','B','C','D'].forEach(k => {
-        const btn = document.getElementById('opt-' + k);
-        if (!btn) return;
-        btn.disabled = true;
-        if (k === q.correct_option) btn.classList.add('correct');
-        else if (k === key) btn.classList.add('wrong');
-      });
+      visited[currentIndex] = true;
+      updateGrid();
+      // Re-render to show correct/wrong immediately
+      renderQuestion(currentIndex);
     }
 
-    function nextQuestion() {
-      clearTimer();
-      if (currentIndex < questions.length - 1) { currentIndex++; renderQuestion(currentIndex); }
-      else submitQuiz();
+    // ── Timer ─────────────────────────────────────────
+    function startTimer(seconds) {
+      timeLeft = seconds;
+      updateTimerUI(seconds, seconds);
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        updateTimerUI(timeLeft, seconds);
+        if (timeLeft <= 0) { clearTimer(); goToNext(); }
+      }, 1000);
     }
 
+    function updateTimerUI(remaining, total) {
+      const el = document.getElementById('timer-val');
+      if (!el) return;
+      el.textContent = remaining;
+      el.className   = 'timer-val' + (remaining <= 5 ? ' urgent' : '');
+    }
+
+    function clearTimer() {
+      if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+    }
+
+    // ── Confirm submit ────────────────────────────────
+    function confirmSubmit() {
+      const unanswered = answers.filter(a => a === null).length;
+      const markedCnt  = marked.filter(Boolean).length;
+
+      if (unanswered === 0 && markedCnt === 0) {
+        submitQuiz();
+        return;
+      }
+
+      // Show confirmation overlay
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:9999;padding:1rem;';
+      let warnings = '';
+      if (unanswered > 0) warnings += `<div style="color:var(--danger);margin:.3rem 0;font-size:.9rem;">⚠ ${unanswered} question${unanswered>1?'s':''} unanswered</div>`;
+      if (markedCnt  > 0) warnings += `<div style="color:var(--warning);margin:.3rem 0;font-size:.9rem;">🔖 ${markedCnt} question${markedCnt>1?'s':''} marked for review</div>`;
+      overlay.innerHTML = `
+        <div style="background:var(--bg-secondary);border-radius:var(--radius);padding:2rem;max-width:380px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.4);">
+          <div style="font-size:2.5rem;margin-bottom:.75rem;">📝</div>
+          <h3 style="margin-bottom:.5rem;">Submit Quiz?</h3>
+          ${warnings}
+          <p style="font-size:.85rem;color:var(--text-muted);margin:.75rem 0 1.25rem;">Once submitted you cannot change your answers.</p>
+          <div style="display:flex;gap:.75rem;justify-content:center;">
+            <button onclick="this.closest('div[style]').remove()" class="btn btn-ghost">Go Back</button>
+            <button onclick="this.closest('div[style]').remove();submitQuiz();" class="btn btn-primary">Submit Now</button>
+          </div>
+        </div>`;
+      document.body.appendChild(overlay);
+    }
+
+    // ── Submit ────────────────────────────────────────
     async function submitQuiz() {
+      clearTimer();
+      // Show submitting overlay
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:9999;';
+      overlay.innerHTML = `<div style="text-align:center;color:#fff;"><div class="spinner" style="width:40px;height:40px;border-width:4px;margin:0 auto 1rem;"></div><p>Saving your score…</p></div>`;
+      document.body.appendChild(overlay);
+
       let score = 0;
       questions.forEach((q, i) => { if (answers[i] === q.correct_option) score++; });
       const percentage = Math.round((score / questions.length) * 100);
 
-      // Save response (existing)
       await saveResponse(quiz.id, score, questions.length, percentage);
 
-      // Save leaderboard entry — one entry per player per quiz (keep best score)
+      // Leaderboard — one entry per player, keep best score
       try {
-        const pName = playerName || 'Anonymous';
-        // Use a deterministic document ID: quizId + playerName (normalized)
-        // This way same player retaking = overwrites if score is better
-        const docId = quiz.id + '_' + pName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        const pName  = playerName || 'Anonymous';
+        const docId  = quiz.id + '_' + pName.toLowerCase().replace(/[^a-z0-9]/g, '_');
         const docRef = db.collection('leaderboard').doc(docId);
         const existing = await docRef.get();
-
         if (!existing.exists) {
-          // First attempt — always save
-          await docRef.set({
-            quiz_id:     quiz.id,
-            quiz_title:  quiz.title,
-            player_name: pName,
-            score:       score,
-            total:       questions.length,
-            percentage:  percentage,
-            attempts:    1,
-            created_at:  firebase.firestore.FieldValue.serverTimestamp(),
-            updated_at:  firebase.firestore.FieldValue.serverTimestamp()
-          });
+          await docRef.set({ quiz_id: quiz.id, quiz_title: quiz.title, player_name: pName,
+            score, total: questions.length, percentage, attempts: 1,
+            created_at: firebase.firestore.FieldValue.serverTimestamp(),
+            updated_at: firebase.firestore.FieldValue.serverTimestamp() });
         } else {
-          // Already exists — only update if new score is BETTER
           const prev = existing.data();
           if (percentage > (prev.percentage || 0)) {
-            await docRef.update({
-              score:      score,
-              percentage: percentage,
-              attempts:   (prev.attempts || 1) + 1,
-              updated_at: firebase.firestore.FieldValue.serverTimestamp()
-            });
+            await docRef.update({ score, percentage, attempts: (prev.attempts||1)+1,
+              updated_at: firebase.firestore.FieldValue.serverTimestamp() });
           } else {
-            // Just increment attempt count
-            await docRef.update({
-              attempts: (prev.attempts || 1) + 1,
-              updated_at: firebase.firestore.FieldValue.serverTimestamp()
-            });
+            await docRef.update({ attempts: (prev.attempts||1)+1,
+              updated_at: firebase.firestore.FieldValue.serverTimestamp() });
           }
         }
-      } catch(e) { console.log('Leaderboard save error:', e); }
+      } catch(e) { console.log('Leaderboard error:', e); }
 
       const params = new URLSearchParams({
         score, total: questions.length, percentage,
@@ -213,23 +624,6 @@
       });
       window.location.href = `result.html?${params.toString()}`;
     }
-
-    function startTimer(seconds) {
-      timeLeft = seconds; updateTimerUI(seconds, seconds);
-      timerInterval = setInterval(() => { timeLeft--; updateTimerUI(timeLeft, seconds); if (timeLeft <= 0) { clearTimer(); nextQuestion(); } }, 1000);
-    }
-
-    function updateTimerUI(remaining, total) {
-      const el = document.getElementById('timer-text');
-      const fill = document.getElementById('timer-fill');
-      if (el) el.textContent = remaining;
-      if (fill) {
-        fill.style.strokeDashoffset = CIRCUMFERENCE * (1 - remaining / total);
-        fill.style.stroke = remaining <= 5 ? 'var(--danger)' : remaining <= total * 0.33 ? 'var(--warning)' : 'var(--accent)';
-      }
-    }
-
-    function clearTimer() { if (timerInterval) { clearInterval(timerInterval); timerInterval = null; } }
   </script>
 </body>
 </html>
