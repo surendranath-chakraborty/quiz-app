@@ -175,3 +175,15 @@ function formatTimestamp(ts) {
     return date.toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' });
   } catch { return '—'; }
 }
+
+async function getLeaderboard(quizId, limit = 20) {
+  try {
+    const snap = await db.collection('leaderboard')
+      .where('quiz_id', '==', quizId)
+      .orderBy('percentage', 'desc')
+      .orderBy('created_at', 'asc')
+      .limit(limit)
+      .get();
+    return { data: snap.docs.map(d => ({ id: d.id, ...d.data() })), error: null };
+  } catch(e) { return { data: [], error: e }; }
+}

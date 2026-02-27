@@ -5,10 +5,54 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Results — QuizForge</title>
   <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <script src="firebase.js"></script>
+  <script src="script.js"></script>
+  <style>
+    /* Leaderboard */
+    .leaderboard-table { width:100%; border-collapse:collapse; font-size:.9rem; }
+    .leaderboard-table th {
+      text-align:left; padding:.6rem 1rem;
+      background:var(--bg-input); color:var(--text-muted);
+      font-size:.75rem; text-transform:uppercase; letter-spacing:.05em;
+      border-bottom:2px solid var(--border);
+    }
+    .leaderboard-table td { padding:.75rem 1rem; border-bottom:1px solid var(--border); vertical-align:middle; }
+    .leaderboard-table tr:last-child td { border-bottom:none; }
+    .leaderboard-table tr.highlight-me td { background:rgba(232,93,38,.08); }
+    .rank-badge {
+      width:32px; height:32px; border-radius:50%;
+      display:inline-flex; align-items:center; justify-content:center;
+      font-weight:800; font-size:.85rem; flex-shrink:0;
+    }
+    .rank-1 { background:#FFD700; color:#000; }
+    .rank-2 { background:#C0C0C0; color:#000; }
+    .rank-3 { background:#CD7F32; color:#fff; }
+    .rank-other { background:var(--bg-input); color:var(--text-muted); }
+    .score-bar-wrap { display:flex; align-items:center; gap:.5rem; }
+    .score-bar { flex:1; height:6px; background:var(--border); border-radius:99px; overflow:hidden; max-width:80px; }
+    .score-bar-fill { height:100%; border-radius:99px; background:var(--accent); transition:width .6s ease; }
+    .medal { font-size:1.2rem; }
+    .lb-empty { text-align:center; padding:2rem; color:var(--text-muted); font-size:.9rem; }
+    .tab-row { display:flex; gap:.5rem; margin-bottom:1rem; }
+    .tab-pill {
+      padding:.4rem .9rem; border-radius:99px; font-size:.8rem; font-weight:600;
+      cursor:pointer; border:1.5px solid var(--border);
+      background:transparent; color:var(--text-muted);
+      font-family:var(--font-body); transition:all var(--transition);
+    }
+    .tab-pill.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+    .your-rank-banner {
+      background:linear-gradient(135deg, var(--accent), #f59e0b);
+      color:#fff; border-radius:var(--radius-sm);
+      padding:.75rem 1.25rem; text-align:center;
+      font-weight:700; font-size:.95rem; margin-bottom:1rem;
+    }
+  </style>
 </head>
 <body>
-  <!-- NAVBAR -->
   <nav class="navbar">
     <a href="index.html" class="logo">Quiz<span>Forge</span></a>
     <div class="navbar-links">
@@ -23,6 +67,7 @@
 
   <main class="result-page">
     <div class="container-sm">
+
       <!-- Score Circle -->
       <div style="text-align:center;" class="animate-in">
         <div id="score-circle" class="score-circle">
@@ -49,7 +94,35 @@
         </div>
       </div>
 
-      <!-- Review section -->
+      <!-- Leaderboard -->
+      <div class="card animate-in animate-delay-2" style="margin-bottom:1.5rem;">
+        <div class="card-header">
+          <h4>🏆 Leaderboard</h4>
+          <span id="lb-quiz-name" class="badge badge-muted"></span>
+        </div>
+        <div class="card-body">
+          <div id="your-rank-banner" style="display:none;" class="your-rank-banner"></div>
+          <div id="lb-loading" style="text-align:center;padding:1.5rem;color:var(--text-muted);">
+            <span class="spinner" style="margin-right:.5rem;"></span> Loading leaderboard…
+          </div>
+          <div id="lb-content" style="display:none;">
+            <table class="leaderboard-table">
+              <thead>
+                <tr>
+                  <th style="width:50px;">Rank</th>
+                  <th>Player</th>
+                  <th>Score</th>
+                  <th>%</th>
+                </tr>
+              </thead>
+              <tbody id="lb-body"></tbody>
+            </table>
+          </div>
+          <div id="lb-empty" class="lb-empty" style="display:none;">No entries yet. Be the first!</div>
+        </div>
+      </div>
+
+      <!-- Answer Review -->
       <div class="card animate-in animate-delay-2" style="margin-bottom:2rem;">
         <div class="card-header">
           <h4>Answer Review</h4>
@@ -59,72 +132,170 @@
       </div>
 
       <!-- Actions -->
-      <div class="flex-center" style="gap:1rem;flex-wrap:wrap;" class="animate-in animate-delay-3">
-        <button class="btn btn-secondary" onclick="history.back()">Retake Quiz</button>
-        <a href="index.html" class="btn btn-primary">Create Your Own Quiz →</a>
+      <div class="flex-center animate-in animate-delay-3" style="gap:1rem;flex-wrap:wrap;margin-bottom:3rem;">
+        <button class="btn btn-secondary" onclick="retakeQuiz()">🔄 Retake Quiz</button>
+        <button class="btn btn-primary" id="whatsapp-share-btn" onclick="shareWhatsApp()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="margin-right:.4rem;">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+          </svg>
+          Share on WhatsApp
+        </button>
+        <a href="index.html" class="btn btn-ghost">Create Your Own Quiz →</a>
       </div>
+
     </div>
   </main>
 
-  <script src="script.js"></script>
-  <script src="supabase.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const params = new URLSearchParams(location.search);
-      const score = parseInt(params.get('score') || '0');
-      const total = parseInt(params.get('total') || '0');
+    document.addEventListener('DOMContentLoaded', async () => {
+      const params     = new URLSearchParams(location.search);
+      const score      = parseInt(params.get('score') || '0');
+      const total      = parseInt(params.get('total') || '0');
       const percentage = parseInt(params.get('percentage') || '0');
-      const title = params.get('title') || 'Quiz';
-      const answers = JSON.parse(params.get('answers') || '[]');
-      const correct = JSON.parse(params.get('correct') || '[]');
+      const title      = params.get('title') || 'Quiz';
+      const quizId     = params.get('quizId') || '';
+      const playerName = params.get('playerName') || 'Anonymous';
+      const answers    = JSON.parse(params.get('answers') || '[]');
+      const correct    = JSON.parse(params.get('correct') || '[]');
 
-      // Score circle color
+      // Score circle colour
       const circle = document.getElementById('score-circle');
-      if (percentage >= 80) circle.style.borderColor = 'var(--success)';
+      if (percentage >= 80)      circle.style.borderColor = 'var(--success)';
       else if (percentage >= 50) circle.style.borderColor = 'var(--warning)';
-      else circle.style.borderColor = 'var(--danger)';
+      else                       circle.style.borderColor = 'var(--danger)';
 
       document.getElementById('score-pct').textContent = percentage + '%';
 
       // Message
       let message, subtitle;
-      if (percentage >= 90) { message = 'Outstanding! 🏆'; subtitle = 'You aced it!'; }
-      else if (percentage >= 75) { message = 'Great job! 🎉'; subtitle = 'Well done!'; }
+      if (percentage >= 90)      { message = 'Outstanding! 🏆'; subtitle = 'You aced it!'; }
+      else if (percentage >= 75) { message = 'Great job! 🎉';   subtitle = 'Well done!'; }
       else if (percentage >= 50) { message = 'Good effort! 👍'; subtitle = 'Keep practicing.'; }
-      else { message = 'Keep trying! 💪'; subtitle = 'Review and try again.'; }
+      else                       { message = 'Keep trying! 💪'; subtitle = 'Review and try again.'; }
 
-      document.getElementById('result-title').textContent = message;
+      document.getElementById('result-title').textContent    = message;
       document.getElementById('result-subtitle').textContent = subtitle;
       document.getElementById('quiz-name-header').textContent = title;
+      document.getElementById('lb-quiz-name').textContent    = title;
 
-      const wrong = total - score;
       document.getElementById('stat-correct').textContent = score;
-      document.getElementById('stat-wrong').textContent = wrong;
-      document.getElementById('stat-total').textContent = total;
+      document.getElementById('stat-wrong').textContent   = total - score;
+      document.getElementById('stat-total').textContent   = total;
 
-      // Answer review (requires question data, but we only have A/B/C/D choices)
+      // ── LEADERBOARD ─────────────────────────────────────
+      if (quizId) {
+        try {
+          // Simple query — no compound orderBy (avoids composite index requirement)
+          const snap = await db.collection('leaderboard')
+            .where('quiz_id', '==', quizId)
+            .limit(100)
+            .get();
+
+          // Sort client-side: highest % first, then earliest submission
+          const entries = snap.docs
+            .map(d => ({ id: d.id, ...d.data() }))
+            .sort((a, b) => b.percentage - a.percentage || (a.created_at?.toMillis?.() || 0) - (b.created_at?.toMillis?.() || 0))
+            .slice(0, 20);
+
+          document.getElementById('lb-loading').style.display = 'none';
+
+          if (entries.length === 0) {
+            document.getElementById('lb-empty').style.display = '';
+          } else {
+            document.getElementById('lb-content').style.display = '';
+            const tbody = document.getElementById('lb-body');
+
+            // Find current player's rank
+            let myRank = -1;
+            entries.forEach((e, i) => {
+              if (e.player_name === playerName && e.percentage === percentage) {
+                if (myRank === -1) myRank = i + 1;
+              }
+            });
+
+            if (myRank > 0) {
+              const banner = document.getElementById('your-rank-banner');
+              const medal  = myRank === 1 ? '🥇' : myRank === 2 ? '🥈' : myRank === 3 ? '🥉' : '🏅';
+              banner.textContent = `${medal} You ranked #${myRank} out of ${entries.length} players!`;
+              banner.style.display = '';
+            }
+
+            tbody.innerHTML = entries.map((e, i) => {
+              const rank    = i + 1;
+              const isMe    = (e.player_name === playerName && e.percentage === percentage);
+              const medals  = ['🥇','🥈','🥉'];
+              const rankEl  = rank <= 3
+                ? `<span class="medal">${medals[rank-1]}</span>`
+                : `<span class="rank-badge rank-other">${rank}</span>`;
+              const barW    = e.percentage + '%';
+              const barCol  = e.percentage >= 80 ? 'var(--success)' : e.percentage >= 50 ? 'var(--warning)' : 'var(--danger)';
+              return `
+                <tr class="${isMe ? 'highlight-me' : ''}">
+                  <td>${rankEl}</td>
+                  <td><strong>${e.player_name}</strong>${isMe ? ' <span style="font-size:.7rem;color:var(--accent);font-weight:700;">(You)</span>' : ''}</td>
+                  <td>
+                    <div class="score-bar-wrap">
+                      <span style="font-weight:700;min-width:35px;">${e.score}/${e.total}</span>
+                      <div class="score-bar">
+                        <div class="score-bar-fill" style="width:${barW};background:${barCol};"></div>
+                      </div>
+                    </div>
+                  </td>
+                  <td><strong style="color:${barCol};">${e.percentage}%</strong></td>
+                </tr>`;
+            }).join('');
+          }
+        } catch(e) {
+          console.log('Leaderboard load error:', e);
+          document.getElementById('lb-loading').style.display = 'none';
+          document.getElementById('lb-empty').style.display   = '';
+        }
+      } else {
+        document.getElementById('lb-loading').style.display = 'none';
+        document.getElementById('lb-empty').style.display   = '';
+      }
+
+      // ── ANSWER REVIEW ────────────────────────────────────
       const reviewEl = document.getElementById('answer-review');
       if (answers.length > 0 && correct.length > 0) {
         reviewEl.innerHTML = answers.map((ans, i) => {
-          const isCorrect = ans === correct[i];
-          const statusIcon = ans === null ? '⏭' : (isCorrect ? '✓' : '✗');
-          const statusColor = ans === null ? 'var(--text-muted)' : (isCorrect ? 'var(--success)' : 'var(--danger)');
+          const isCorrect   = ans === correct[i];
+          const isSkipped   = ans === null;
+          const statusIcon  = isSkipped ? '⏭' : (isCorrect ? '✓' : '✗');
+          const statusColor = isSkipped ? 'var(--text-muted)' : (isCorrect ? 'var(--success)' : 'var(--danger)');
           return `
-            <div style="display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0;border-bottom:1px solid var(--border);">
-              <div style="width:28px;height:28px;border-radius:50%;background:${statusColor}22;display:flex;align-items:center;justify-content:center;font-size:0.875rem;font-weight:700;color:${statusColor};flex-shrink:0;">${statusIcon}</div>
+            <div style="display:flex;align-items:center;gap:.75rem;padding:.6rem 0;border-bottom:1px solid var(--border);">
+              <div style="width:28px;height:28px;border-radius:50%;background:${statusColor}22;display:flex;align-items:center;justify-content:center;font-size:.875rem;font-weight:700;color:${statusColor};flex-shrink:0;">${statusIcon}</div>
               <div style="flex:1;">
-                <div style="font-size:0.85rem;font-weight:600;color:var(--text-primary);">Question ${i + 1}</div>
-                <div style="font-size:0.78rem;color:var(--text-secondary);">
-                  Your answer: <strong style="color:${statusColor}">${ans || 'Skipped'}</strong>
-                  ${!isCorrect && ans !== null ? `&nbsp;·&nbsp; Correct: <strong style="color:var(--success)">${correct[i]}</strong>` : ''}
+                <div style="font-size:.85rem;font-weight:600;color:var(--text-primary);">Question ${i + 1}</div>
+                <div style="font-size:.8rem;color:var(--text-muted);">
+                  Your answer: <strong>${ans || 'Skipped'}</strong>
+                  ${!isCorrect && !isSkipped ? ` · Correct: <strong style="color:var(--success);">${correct[i]}</strong>` : ''}
                 </div>
               </div>
             </div>`;
         }).join('');
       } else {
-        reviewEl.innerHTML = '<p>No review data available.</p>';
+        reviewEl.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:1rem;">No review data available.</p>';
       }
+
+      // ── WHATSAPP SHARE ───────────────────────────────────
+      window._quizShareData = { quizId, title, playerName, score, total, percentage };
     });
+
+    function retakeQuiz() {
+      const params = new URLSearchParams(location.search);
+      const quizId = params.get('quizId');
+      if (quizId) window.location.href = `quiz.html?id=${quizId}`;
+      else history.back();
+    }
+
+    function shareWhatsApp() {
+      const d = window._quizShareData || {};
+      const quizUrl = window.location.origin + '/quiz.html?id=' + (d.quizId || '');
+      const text = `🏆 I scored *${d.percentage}%* (${d.score}/${d.total}) on *${d.title}*!\n\nCan you beat my score? Take the quiz here:\n${quizUrl}`;
+      window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+    }
   </script>
 </body>
 </html>

@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Quiz — QuizForge</title>
   <link rel="stylesheet" href="style.css" />
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <script src="firebase.js"></script>
+  <script src="script.js"></script>
 </head>
 <body>
   <div class="quiz-player">
@@ -51,14 +56,40 @@
     </div>
   </div>
 
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-  <script src="firebase.js"></script>
-  <script src="script.js"></script>
   <script>
     let quiz = null, questions = [], currentIndex = 0, answers = [], timerInterval = null, timeLeft = 0;
     const CIRCUMFERENCE = 2 * Math.PI * 26;
+
+    let playerName = 'Anonymous';
+
+    function askPlayerName() {
+      return new Promise(resolve => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:9999;padding:1rem;';
+        overlay.innerHTML = `
+          <div style="background:var(--bg-secondary);border-radius:var(--radius);padding:2rem;max-width:380px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.4);">
+            <div style="font-size:3rem;margin-bottom:0.75rem;">🏆</div>
+            <h2 style="margin-bottom:0.4rem;font-size:1.4rem;color:var(--text-primary);">Enter Your Name</h2>
+            <p style="font-size:0.875rem;color:var(--text-muted);margin-bottom:1.25rem;">Your name will appear on the leaderboard!</p>
+            <input id="player-name-input" class="form-input" type="text" placeholder="Your name..."
+              maxlength="30" style="text-align:center;font-size:1.05rem;margin-bottom:1rem;"/>
+            <button id="start-now-btn" class="btn btn-primary" style="width:100%;font-size:1rem;padding:0.75rem 1rem;">
+              Start Quiz 🚀
+            </button>
+            <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.75rem;">Leave blank to play as Anonymous</p>
+          </div>`;
+        document.body.appendChild(overlay);
+        const inp = document.getElementById('player-name-input');
+        inp.focus();
+        const go = () => {
+          playerName = inp.value.trim() || 'Anonymous';
+          overlay.remove();
+          resolve();
+        };
+        document.getElementById('start-now-btn').onclick = go;
+        inp.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+      });
+    }
 
     document.addEventListener('DOMContentLoaded', async () => {
       const params = new URLSearchParams(location.search);
@@ -70,8 +101,10 @@
       if (qsErr || !qs || qs.length === 0) { showError('No questions found for this quiz.'); return; }
       quiz = quizData; questions = qs; answers = new Array(questions.length).fill(null);
       document.title = quiz.title + ' — QuizForge';
-      document.getElementById('quiz-title-header').textContent = quiz.title;
       document.getElementById('quiz-loading').style.display = 'none';
+      // Ask player name before showing quiz
+      await askPlayerName();
+      document.getElementById('quiz-title-header').textContent = quiz.title;
       document.getElementById('quiz-header').style.display = 'flex';
       document.getElementById('quiz-content').style.display = 'block';
       renderQuestion(0);
@@ -125,8 +158,30 @@
       let score = 0;
       questions.forEach((q, i) => { if (answers[i] === q.correct_option) score++; });
       const percentage = Math.round((score / questions.length) * 100);
+
+      // Save response (existing)
       await saveResponse(quiz.id, score, questions.length, percentage);
-      const params = new URLSearchParams({ score, total: questions.length, percentage, title: quiz.title, answers: JSON.stringify(answers), correct: JSON.stringify(questions.map(q => q.correct_option)) });
+
+      // Save leaderboard entry
+      try {
+        await db.collection('leaderboard').add({
+          quiz_id:     quiz.id,
+          quiz_title:  quiz.title,
+          player_name: playerName || 'Anonymous',
+          score:       score,
+          total:       questions.length,
+          percentage:  percentage,
+          created_at:  firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } catch(e) { console.log('Leaderboard save error:', e); }
+
+      const params = new URLSearchParams({
+        score, total: questions.length, percentage,
+        title: quiz.title, quizId: quiz.id,
+        playerName: playerName || 'Anonymous',
+        answers: JSON.stringify(answers),
+        correct: JSON.stringify(questions.map(q => q.correct_option))
+      });
       window.location.href = `result.html?${params.toString()}`;
     }
 

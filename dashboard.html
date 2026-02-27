@@ -344,9 +344,52 @@
             <button id="copy-btn" onclick="copyShareLink()">Copy Link</button>
           </div>
         </div>
+        <!-- WhatsApp share button -->
+        <button onclick="shareOnWhatsApp()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:.6rem;background:#25D366;color:#fff;border:none;border-radius:var(--radius-sm);padding:.75rem 1rem;font-size:.95rem;font-weight:700;cursor:pointer;font-family:var(--font-body);transition:opacity .2s;" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+          </svg>
+          Share on WhatsApp
+        </button>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-primary" onclick="closeModal('share-modal')">Done</button>
+        <button class="btn btn-ghost" onclick="closeModal('share-modal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEADERBOARD MODAL -->
+  <div id="lb-modal" class="modal-overlay" style="display:none;" onclick="closeOnBackdrop(event,'lb-modal')">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:560px;">
+      <div class="modal-header">
+        <h3>🏆 Leaderboard</h3>
+        <button class="btn btn-ghost btn-icon" onclick="closeModal('lb-modal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="lb-modal-name" style="font-size:.85rem;color:var(--text-muted);margin-bottom:1rem;"></div>
+        <div id="lb-modal-loading" style="text-align:center;padding:2rem;color:var(--text-muted);">
+          <span class="spinner"></span> Loading…
+        </div>
+        <div id="lb-modal-content" style="display:none;overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:.875rem;">
+            <thead>
+              <tr>
+                <th style="text-align:left;padding:.5rem .75rem;background:var(--bg-input);font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);border-bottom:2px solid var(--border);">Rank</th>
+                <th style="text-align:left;padding:.5rem .75rem;background:var(--bg-input);font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);border-bottom:2px solid var(--border);">Player</th>
+                <th style="text-align:left;padding:.5rem .75rem;background:var(--bg-input);font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);border-bottom:2px solid var(--border);">Score</th>
+                <th style="text-align:left;padding:.5rem .75rem;background:var(--bg-input);font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);border-bottom:2px solid var(--border);">%</th>
+                <th style="text-align:left;padding:.5rem .75rem;background:var(--bg-input);font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);border-bottom:2px solid var(--border);">Date</th>
+              </tr>
+            </thead>
+            <tbody id="lb-modal-body"></tbody>
+          </table>
+        </div>
+        <div id="lb-modal-empty" style="display:none;text-align:center;padding:2rem;color:var(--text-muted);font-size:.9rem;">
+          No one has taken this quiz yet. Share it to get entries!
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="closeModal('lb-modal')">Close</button>
       </div>
     </div>
   </div>
@@ -620,6 +663,7 @@
           </div>
           <div class="card-footer" style="flex-wrap:wrap;gap:0.5rem;">
             <button class="btn btn-secondary btn-sm" onclick="openShareModal('${q.id}')">🔗 Share</button>
+              <button class="btn btn-ghost btn-sm" onclick="openLeaderboardModal('${q.id}', this)" data-title="${escapeHtml(q.title)}">🏆 Leaderboard</button>
             <a href="analytics.html?quiz=${q.id}" class="btn btn-ghost btn-sm">📈 Analytics</a>
             <button class="btn btn-danger btn-sm" onclick="confirmDelete('${q.id}','${escapeHtml(q.title)}')">🗑 Delete</button>
           </div>
@@ -778,6 +822,65 @@
       if (qError) { showAlert('csv-alert', qError.message, 'error'); }
       else { closeModal('csv-modal'); await loadQuizzes(); showToast(`Imported ${csvParsedQuestions.length} questions! 🎉`); }
       btn.disabled = false; btn.textContent = 'Import Quiz';
+    }
+
+    function shareOnWhatsApp() {
+      const link = document.getElementById('share-link').value;
+      const text = '🧠 Take this quiz I created on QuizForge!\n\n' + link;
+      window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+    }
+
+    async function openLeaderboardModal(quizId, btnOrTitle) {
+      const quizTitle = typeof btnOrTitle === 'string' ? btnOrTitle : (btnOrTitle?.dataset?.title || 'Quiz');
+      document.getElementById('lb-modal-name').textContent = 'Quiz: ' + quizTitle;
+      document.getElementById('lb-modal-loading').style.display = '';
+      document.getElementById('lb-modal-content').style.display = 'none';
+      document.getElementById('lb-modal-empty').style.display   = 'none';
+      openModal('lb-modal');
+
+      try {
+        // No compound orderBy to avoid needing a composite index
+        const snap = await db.collection('leaderboard')
+          .where('quiz_id', '==', quizId)
+          .limit(100)
+          .get();
+
+        document.getElementById('lb-modal-loading').style.display = 'none';
+
+        // Sort client-side: highest % first, then earliest date
+        const allDocs = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => b.percentage - a.percentage || (a.created_at?.toMillis?.() || 0) - (b.created_at?.toMillis?.() || 0));
+
+        if (snap.empty) {
+          document.getElementById('lb-modal-empty').style.display = '';
+          return;
+        }
+
+        const medals = ['🥇','🥈','🥉'];
+        const rows = allDocs.map((e, i) => {
+          const rank = i + 1;
+          const rankEl = rank <= 3 ? medals[rank-1] : `#${rank}`;
+          const pct  = e.percentage;
+          const col  = pct >= 80 ? 'var(--success)' : pct >= 50 ? 'var(--warning)' : 'var(--danger)';
+          const date = e.created_at ? e.created_at.toDate().toLocaleDateString('en-IN',{day:'numeric',month:'short'}) : '—';
+          return `<tr>
+            <td style="padding:.6rem .75rem;border-bottom:1px solid var(--border);font-size:1rem;">${rankEl}</td>
+            <td style="padding:.6rem .75rem;border-bottom:1px solid var(--border);font-weight:600;">${e.player_name}</td>
+            <td style="padding:.6rem .75rem;border-bottom:1px solid var(--border);">${e.score}/${e.total}</td>
+            <td style="padding:.6rem .75rem;border-bottom:1px solid var(--border);font-weight:700;color:${col};">${pct}%</td>
+            <td style="padding:.6rem .75rem;border-bottom:1px solid var(--border);font-size:.78rem;color:var(--text-muted);">${date}</td>
+          </tr>`;
+        }).join('');
+
+        document.getElementById('lb-modal-body').innerHTML = rows;
+        document.getElementById('lb-modal-content').style.display = '';
+
+      } catch(e) {
+        console.error('Leaderboard error:', e);
+        document.getElementById('lb-modal-loading').style.display = 'none';
+        document.getElementById('lb-modal-empty').style.display   = '';
+      }
     }
 
     function openShareModal(quizId) {
