@@ -378,6 +378,7 @@
                 <th style="text-align:left;padding:.5rem .75rem;background:var(--bg-input);font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);border-bottom:2px solid var(--border);">Player</th>
                 <th style="text-align:left;padding:.5rem .75rem;background:var(--bg-input);font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);border-bottom:2px solid var(--border);">Score</th>
                 <th style="text-align:left;padding:.5rem .75rem;background:var(--bg-input);font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);border-bottom:2px solid var(--border);">%</th>
+                <th style="text-align:left;padding:.5rem .75rem;background:var(--bg-input);font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);border-bottom:2px solid var(--border);">Tries</th>
                 <th style="text-align:left;padding:.5rem .75rem;background:var(--bg-input);font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);border-bottom:2px solid var(--border);">Date</th>
               </tr>
             </thead>
@@ -847,9 +848,16 @@
 
         document.getElementById('lb-modal-loading').style.display = 'none';
 
-        // Sort client-side: highest % first, then earliest date
-        const allDocs = snap.docs
-          .map(d => ({ id: d.id, ...d.data() }))
+        // Deduplicate by player name — keep only best score per player
+        const rawDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const bestMap = {};
+        rawDocs.forEach(e => {
+          const key = (e.player_name || 'Anonymous').toLowerCase().trim();
+          if (!bestMap[key] || e.percentage > bestMap[key].percentage) {
+            bestMap[key] = e;
+          }
+        });
+        const allDocs = Object.values(bestMap)
           .sort((a, b) => b.percentage - a.percentage || (a.created_at?.toMillis?.() || 0) - (b.created_at?.toMillis?.() || 0));
 
         if (snap.empty) {
@@ -869,6 +877,7 @@
             <td style="padding:.6rem .75rem;border-bottom:1px solid var(--border);font-weight:600;">${e.player_name}</td>
             <td style="padding:.6rem .75rem;border-bottom:1px solid var(--border);">${e.score}/${e.total}</td>
             <td style="padding:.6rem .75rem;border-bottom:1px solid var(--border);font-weight:700;color:${col};">${pct}%</td>
+            <td style="padding:.6rem .75rem;border-bottom:1px solid var(--border);font-size:.78rem;color:var(--text-muted);">${e.attempts > 1 ? e.attempts + 'x' : '1x'}</td>
             <td style="padding:.6rem .75rem;border-bottom:1px solid var(--border);font-size:.78rem;color:var(--text-muted);">${date}</td>
           </tr>`;
         }).join('');

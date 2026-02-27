@@ -162,17 +162,46 @@
       // Save response (existing)
       await saveResponse(quiz.id, score, questions.length, percentage);
 
-      // Save leaderboard entry
+      // Save leaderboard entry — one entry per player per quiz (keep best score)
       try {
-        await db.collection('leaderboard').add({
-          quiz_id:     quiz.id,
-          quiz_title:  quiz.title,
-          player_name: playerName || 'Anonymous',
-          score:       score,
-          total:       questions.length,
-          percentage:  percentage,
-          created_at:  firebase.firestore.FieldValue.serverTimestamp()
-        });
+        const pName = playerName || 'Anonymous';
+        // Use a deterministic document ID: quizId + playerName (normalized)
+        // This way same player retaking = overwrites if score is better
+        const docId = quiz.id + '_' + pName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        const docRef = db.collection('leaderboard').doc(docId);
+        const existing = await docRef.get();
+
+        if (!existing.exists) {
+          // First attempt — always save
+          await docRef.set({
+            quiz_id:     quiz.id,
+            quiz_title:  quiz.title,
+            player_name: pName,
+            score:       score,
+            total:       questions.length,
+            percentage:  percentage,
+            attempts:    1,
+            created_at:  firebase.firestore.FieldValue.serverTimestamp(),
+            updated_at:  firebase.firestore.FieldValue.serverTimestamp()
+          });
+        } else {
+          // Already exists — only update if new score is BETTER
+          const prev = existing.data();
+          if (percentage > (prev.percentage || 0)) {
+            await docRef.update({
+              score:      score,
+              percentage: percentage,
+              attempts:   (prev.attempts || 1) + 1,
+              updated_at: firebase.firestore.FieldValue.serverTimestamp()
+            });
+          } else {
+            // Just increment attempt count
+            await docRef.update({
+              attempts: (prev.attempts || 1) + 1,
+              updated_at: firebase.firestore.FieldValue.serverTimestamp()
+            });
+          }
+        }
       } catch(e) { console.log('Leaderboard save error:', e); }
 
       const params = new URLSearchParams({

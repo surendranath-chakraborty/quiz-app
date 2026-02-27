@@ -191,9 +191,16 @@
             .limit(100)
             .get();
 
-          // Sort client-side: highest % first, then earliest submission
-          const entries = snap.docs
-            .map(d => ({ id: d.id, ...d.data() }))
+          // Deduplicate by player name — keep only best score per player
+          const rawEntries = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          const bestByPlayer = {};
+          rawEntries.forEach(e => {
+            const key = (e.player_name || 'Anonymous').toLowerCase().trim();
+            if (!bestByPlayer[key] || e.percentage > bestByPlayer[key].percentage) {
+              bestByPlayer[key] = e;
+            }
+          });
+          const entries = Object.values(bestByPlayer)
             .sort((a, b) => b.percentage - a.percentage || (a.created_at?.toMillis?.() || 0) - (b.created_at?.toMillis?.() || 0))
             .slice(0, 20);
 
@@ -229,10 +236,11 @@
                 : `<span class="rank-badge rank-other">${rank}</span>`;
               const barW    = e.percentage + '%';
               const barCol  = e.percentage >= 80 ? 'var(--success)' : e.percentage >= 50 ? 'var(--warning)' : 'var(--danger)';
+              const tries = e.attempts > 1 ? `<span style="font-size:.7rem;color:var(--text-muted);margin-left:.3rem;">${e.attempts} tries</span>` : '';
               return `
                 <tr class="${isMe ? 'highlight-me' : ''}">
                   <td>${rankEl}</td>
-                  <td><strong>${e.player_name}</strong>${isMe ? ' <span style="font-size:.7rem;color:var(--accent);font-weight:700;">(You)</span>' : ''}</td>
+                  <td><strong>${e.player_name}</strong>${isMe ? ' <span style="font-size:.7rem;color:var(--accent);font-weight:700;">(You)</span>' : ''}${tries}</td>
                   <td>
                     <div class="score-bar-wrap">
                       <span style="font-weight:700;min-width:35px;">${e.score}/${e.total}</span>
