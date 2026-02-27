@@ -101,50 +101,73 @@ function formatDate(dateStr) {
  * Returns array of question objects and any errors.
  */
 function parseCSV(csvText) {
-  const lines = csvText.trim().split('\n');
+  // Normalise all line endings: Windows CRLF, old Mac CR, Unix LF
+  const normalised = csvText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const lines = normalised.trim().split('\n');
   if (lines.length < 2) return { questions: [], errors: ['CSV must have a header row and at least one question.'] };
 
-  const errors = [];
+  const errors    = [];
   const questions = [];
   const validCorrect = ['A', 'B', 'C', 'D'];
 
-  // Skip header
-  for (let i = 1; i < lines.length; i++) {
-    const raw = lines[i].trim();
-    if (!raw) continue;
+  // Auto-detect delimiter — comma or semicolon (European Excel uses semicolons)
+  const delimiter = lines[0].includes(';') ? ';' : ',';
 
-    // Handle quoted fields with commas
-    const cols = parseCSVLine(raw);
+  // Skip header row
+  for (let i = 1; i < lines.length; i++) {
+    // Strip carriage return and whitespace from each line
+    const raw = lines[i].replace(/\r/g, '').trim();
+    if (!raw) continue; // skip blank lines
+
+    const cols = parseCSVLine(raw, delimiter);
+
     if (cols.length < 6) {
       errors.push(`Row ${i + 1}: Not enough columns (expected 6, got ${cols.length}).`);
       continue;
     }
 
-    const [questionText, optionA, optionB, optionC, optionD, correctRaw] = cols.map(c => c.trim());
-    const correctOption = correctRaw.toUpperCase().replace('OPTION', '').trim();
+    // Clean each cell: trim whitespace and remove surrounding quotes
+    const clean = cols.map(c => c.trim().replace(/^["']|["']$/g, '').trim());
+    const [questionText, optionA, optionB, optionC, optionD, correctRaw] = clean;
 
-    if (!questionText) { errors.push(`Row ${i + 1}: Question text is empty.`); continue; }
-    if (!optionA || !optionB || !optionC || !optionD) { errors.push(`Row ${i + 1}: All four options must be filled.`); continue; }
-    if (!validCorrect.includes(correctOption)) { errors.push(`Row ${i + 1}: Correct option must be A, B, C, or D. Got: "${correctRaw}".`); continue; }
+    // Accept: "B", "b", "Option B", "option b", "(B)" etc.
+    const correctOption = correctRaw
+      .toUpperCase()
+      .replace(/OPTION\s*/g, '')
+      .replace(/[^A-D]/g, '')
+      .trim();
 
-    questions.push({ question_text: questionText, option_a: optionA, option_b: optionB, option_c: optionC, option_d: optionD, correct_option: correctOption });
+    if (!questionText)                           { errors.push(`Row ${i + 1}: Question text is empty.`); continue; }
+    if (!optionA||!optionB||!optionC||!optionD)  { errors.push(`Row ${i + 1}: All four options must be filled.`); continue; }
+    if (!validCorrect.includes(correctOption))   { errors.push(`Row ${i + 1}: Correct option must be A, B, C, or D. Got: "${correctRaw}".`); continue; }
+
+    questions.push({
+      question_text:  questionText,
+      option_a:       optionA,
+      option_b:       optionB,
+      option_c:       optionC,
+      option_d:       optionD,
+      correct_option: correctOption
+    });
   }
 
   return { questions, errors };
 }
 
-function parseCSVLine(line) {
+function parseCSVLine(line, delimiter = ',') {
   const result = [];
   let cur = '';
   let inQuotes = false;
   for (let i = 0; i < line.length; i++) {
     const ch = line[i];
     if (ch === '"') {
-      if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; }
+      if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; } // escaped quote
       else { inQuotes = !inQuotes; }
-    } else if (ch === ',' && !inQuotes) {
+    } else if (ch === delimiter && !inQuotes) {
       result.push(cur); cur = '';
-    } else { cur += ch; }
+    } else {
+      cur += ch;
+    }
   }
   result.push(cur);
   return result;
