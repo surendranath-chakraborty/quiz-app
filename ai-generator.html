@@ -455,37 +455,21 @@ What color is the sky? 1-Red 2-Blue 3-Green 4-Yellow correct:2"
       const animTimer = startGeneratingAnimation();
 
       try {
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
+        // Call Netlify proxy (Gemini API — completely free)
+        const response = await fetch('/.netlify/functions/aiProxy', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 4000,
-            system: `You are an expert quiz maker. The user will paste raw MCQ content in ANY format.
-
-Extract ALL questions and return ONLY this exact JSON (no explanation, no markdown, no backticks):
-
-{"questions":[{"question":"Full question text?","option_a":"First option","option_b":"Second option","option_c":"Third option","option_d":"Fourth option","correct":"A"}]}
-
-RULES:
-- correct must be ONLY "A", "B", "C", or "D" (capital letter)
-- Extract every question you find regardless of format
-- If options are 1/2/3/4 map them to A/B/C/D in order
-- If answer is given as full text match it to the correct letter
-- Clean all formatting, remove bullets/numbers from option text
-- Skip questions with fewer than 4 options
-- Return ONLY valid JSON, nothing else`,
-            messages: [{ role: 'user', content: input }]
-          })
+          body: JSON.stringify({ content: input })
         });
 
         clearInterval(animTimer);
         const data = await response.json();
 
-        if (data.error) throw new Error(data.error.message);
+        if (data.error) throw new Error(typeof data.error === 'string' ? data.error : 'API error');
 
-        const text  = (data.content || []).map(b => b.text || '').join('');
-        const clean = text.replace(/```json|```/g, '').trim();
+        // Gemini returns { text: "..." }
+        const raw   = data.text || '';
+        const clean = raw.replace(/```json|```/g, '').trim();
         const parsed = JSON.parse(clean);
         const qs = parsed.questions || [];
 
