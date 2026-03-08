@@ -14,7 +14,7 @@
   <style>
     /* ── STARTUP LOADER ── */
     #qf-loader {
-      position: fixed; inset: 0; z-index: 99999;
+      position: fixed; top:0; right:0; bottom:0; left:0; z-index: 99999;
       background: #0f0d0b;
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
@@ -40,7 +40,6 @@
       border: 3px solid rgba(255,255,255,.1);
       border-top-color: #f07040;
       border-right-color: #f5b84a;
-      animation: spin 1s linear infinite;
       opacity: 0;
       animation: spin 1s linear infinite, fadeIn .4s ease .6s forwards;
     }
@@ -110,7 +109,7 @@
 
     /* ── FLOATING PARTICLES (canvas) ── */
     #particle-canvas {
-      position: fixed; inset: 0;
+      position: fixed; top:0; right:0; bottom:0; left:0;
       pointer-events: none; z-index: 0;
       opacity: .4;
     }
@@ -447,38 +446,82 @@
 
 
   <!-- PWA Install Banner -->
-  <div id="pwa-banner" style="display:none;position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);z-index:9000;background:#1c1a18;border:1.5px solid #e85d26;border-radius:16px;padding:1rem 1.5rem;box-shadow:0 8px 32px rgba(0,0,0,0.4);display:none;align-items:center;gap:1rem;max-width:360px;width:calc(100% - 2rem);">
-    <img src="/icons/icon-72.png" style="width:44px;height:44px;border-radius:10px;" />
-    <div style="flex:1;">
+  <div id="pwa-banner" style="position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);z-index:9000;background:#1c1a18;border:1.5px solid #e85d26;border-radius:16px;padding:1rem 1.5rem;box-shadow:0 8px 32px rgba(0,0,0,0.4);align-items:center;gap:1rem;max-width:360px;width:calc(100% - 2rem);display:none;">
+    <img src="/icons/icon-72.png" style="width:44px;height:44px;border-radius:10px;flex-shrink:0;" />
+    <div style="flex:1;min-width:0;">
       <div style="font-weight:700;font-size:.9rem;color:#f0ede8;">Install QuizForge</div>
-      <div style="font-size:.78rem;color:#a09d98;margin-top:.15rem;">Add to home screen for the best experience</div>
+      <div style="font-size:.78rem;color:#a09d98;margin-top:.15rem;">Add to home screen for app experience</div>
     </div>
-    <div style="display:flex;flex-direction:column;gap:.4rem;">
+    <div style="display:flex;flex-direction:column;gap:.4rem;flex-shrink:0;">
       <button id="pwa-install-btn" style="background:#e85d26;color:#fff;border:none;border-radius:8px;padding:.4rem .9rem;font-size:.8rem;font-weight:700;cursor:pointer;white-space:nowrap;">Install</button>
-      <button onclick="document.getElementById('pwa-banner').style.display='none';localStorage.setItem('pwa-dismissed','1')" style="background:none;border:none;color:#6a6763;font-size:.75rem;cursor:pointer;">Not now</button>
+      <button id="pwa-dismiss-btn" style="background:none;border:none;color:#6a6763;font-size:.75rem;cursor:pointer;">Not now</button>
     </div>
   </div>
+
   <script>
-    let deferredPrompt;
+    // ── PWA Install ──────────────────────────────────
+    let deferredPrompt = null;
+
+    function showPWABanner() {
+      if (localStorage.getItem('pwa-dismissed')) return;
+      if (window.matchMedia('(display-mode: standalone)').matches) return;
+      const banner = document.getElementById('pwa-banner');
+      if (banner) banner.style.display = 'flex';
+    }
+
+    function hidePWABanner() {
+      const banner = document.getElementById('pwa-banner');
+      if (banner) banner.style.display = 'none';
+    }
+
+    // Capture the install prompt ASAP
     window.addEventListener('beforeinstallprompt', e => {
       e.preventDefault();
       deferredPrompt = e;
-      if (!localStorage.getItem('pwa-dismissed') && !window.matchMedia('(display-mode: standalone)').matches) {
-        setTimeout(() => {
-          document.getElementById('pwa-banner').style.display = 'flex';
-        }, 3000);
+      console.log('[PWA] Install prompt captured');
+      setTimeout(showPWABanner, 3000);
+    });
+
+    // Install button click
+    document.addEventListener('DOMContentLoaded', () => {
+      const installBtn  = document.getElementById('pwa-install-btn');
+      const dismissBtn  = document.getElementById('pwa-dismiss-btn');
+
+      if (installBtn) {
+        installBtn.addEventListener('click', async () => {
+          console.log('[PWA] Install clicked, prompt:', deferredPrompt);
+          hidePWABanner();
+          if (!deferredPrompt) {
+            // Fallback: show manual instructions
+            alert('To install QuizForge:\n\nAndroid: Tap menu (3 dots) then Add to Home screen\n\niPhone: Tap Share button then Add to Home Screen');
+            return;
+          }
+          try {
+            await deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log('[PWA] User choice:', outcome);
+            if (outcome === 'accepted') {
+              console.log('[PWA] Installed!');
+            }
+          } catch(err) {
+            console.error('[PWA] Prompt error:', err);
+          }
+          deferredPrompt = null;
+        });
+      }
+
+      if (dismissBtn) {
+        dismissBtn.addEventListener('click', () => {
+          hidePWABanner();
+          localStorage.setItem('pwa-dismissed', '1');
+        });
       }
     });
-    document.getElementById('pwa-install-btn')?.addEventListener('click', async () => {
-      if (!deferredPrompt) return;
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      deferredPrompt = null;
-      document.getElementById('pwa-banner').style.display = 'none';
-      if (outcome === 'accepted') localStorage.setItem('pwa-installed', '1');
-    });
+
     window.addEventListener('appinstalled', () => {
-      document.getElementById('pwa-banner').style.display = 'none';
+      console.log('[PWA] App installed successfully!');
+      hidePWABanner();
+      localStorage.setItem('pwa-installed', '1');
     });
   </script>
   <!-- Register Service Worker -->
