@@ -1,5 +1,5 @@
 // QuizForge Service Worker v1.0
-const CACHE_NAME = 'quizforge-v1';
+const CACHE_NAME = 'quizforge-v2';
 const OFFLINE_URL = '/offline.html';
 
 // Files to cache for offline use
