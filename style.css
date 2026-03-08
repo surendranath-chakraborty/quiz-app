@@ -949,3 +949,30 @@ tbody tr:hover { background: var(--bg-hover); }
   #user-display-name { display: none !important; }
   .user-avatar-btn { padding: 0.25rem !important; border-radius: 50% !important; }
 }
+
+/* ── Mobile navbar hamburger ── */
+.hamburger-btn {
+  background: none;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: all var(--transition);
+}
+.hamburger-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Show/hide based on screen */
+.nav-desktop-only { display: inline-flex !important; }
+.nav-mobile-only  { display: none !important; }
+
+@media (max-width: 600px) {
+  .nav-desktop-only { display: none !important; }
+  .nav-mobile-only  { display: inline-flex !important; }
+  #user-display-name { display: none !important; }
+  .user-avatar-btn {
+    padding: 0.25rem 0.4rem 0.25rem 0.25rem !important;
+  }
+}
