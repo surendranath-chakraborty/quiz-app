@@ -84,14 +84,17 @@
   <nav class="navbar">
     <a href="dashboard.html" class="logo">Quiz<span>Forge</span></a>
     <div class="navbar-links">
-      <a href="analytics.html" class="btn btn-ghost btn-sm nav-hide-sm">📈 Analytics</a>
-      <a href="ai-generator.html" class="btn btn-ghost btn-sm" style="color:var(--accent);border-color:rgba(232,93,38,.3);">🤖 AI</a>
+      <!-- Desktop links -->
+      <a href="analytics.html" class="btn btn-ghost btn-sm nav-desktop-only">📈 Analytics</a>
+      <a href="ai-generator.html" class="btn btn-ghost btn-sm nav-desktop-only" style="color:var(--accent);border-color:rgba(232,93,38,.3);">🤖 AI Generator</a>
       <div class="theme-toggle">
         <label class="toggle-switch">
           <input type="checkbox" class="dark-toggle-input" />
           <span class="toggle-slider"></span>
         </label>
       </div>
+      <!-- Mobile hamburger -->
+      <button class="hamburger-btn nav-mobile-only" onclick="toggleMobileMenu()" id="hamburger-btn">☰</button>
 
       <!-- User Profile Dropdown -->
       <div class="user-menu-wrap" id="user-menu-wrap">
@@ -216,6 +219,12 @@
     </div>
   </div>
 
+  <!-- Mobile slide-down menu -->
+  <div id="mobile-menu" style="display:none;position:fixed;top:57px;left:0;right:0;z-index:999;background:var(--bg-secondary);border-bottom:1px solid var(--border);padding:0.75rem 1rem;box-shadow:0 4px 20px rgba(0,0,0,0.15);">
+    <a href="analytics.html" style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem;border-radius:var(--radius-sm);color:var(--text-primary);text-decoration:none;font-weight:600;font-size:0.9rem;" onclick="closeMobileMenu()">📈 Analytics</a>
+    <a href="ai-generator.html" style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem;border-radius:var(--radius-sm);color:var(--accent);text-decoration:none;font-weight:700;font-size:0.9rem;border:1px solid rgba(232,93,38,.2);margin-top:0.35rem;" onclick="closeMobileMenu()">🤖 AI Generator</a>
+  </div>
+
   <main class="page">
     <div class="container">
       <div class="dashboard-header animate-in">
@@ -224,6 +233,7 @@
           <p>Create, manage, and share your quizzes.</p>
         </div>
         <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+          <button class="btn btn-secondary" onclick="openCSVModal()">📁 Import CSV</button>
           <button class="btn btn-primary" onclick="openCreateModal()">+ New Quiz</button>
         </div>
       </div>
@@ -913,6 +923,29 @@
     function closeModal(id) { document.getElementById(id).style.display = 'none'; document.body.style.overflow = ''; }
     function closeOnBackdrop(e, id) { if (e.target.id === id) closeModal(id); }
     function escapeHtml(str) { if (!str) return ''; return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  
+    // ── Mobile menu ───────────────────────────────────
+    function toggleMobileMenu() {
+      const menu = document.getElementById('mobile-menu');
+      const btn  = document.getElementById('hamburger-btn');
+      const open = menu.style.display === 'none' || menu.style.display === '';
+      menu.style.display = open ? 'block' : 'none';
+      btn.textContent    = open ? '✕' : '☰';
+    }
+    function closeMobileMenu() {
+      document.getElementById('mobile-menu').style.display = 'none';
+      document.getElementById('hamburger-btn').textContent = '☰';
+    }
+    // Close mobile menu on outside click
+    document.addEventListener('click', (e) => {
+      const menu = document.getElementById('mobile-menu');
+      const btn  = document.getElementById('hamburger-btn');
+      if (menu && !menu.contains(e.target) && btn && !btn.contains(e.target)) {
+        menu.style.display = 'none';
+        btn.textContent = '☰';
+      }
+    });
+
   </script>
 </body>
 </html>
