@@ -936,3 +936,16 @@ tbody tr:hover { background: var(--bg-hover); }
   .auth-card { max-width: 100%; }
   .navbar-links .btn-ghost { display: none; }
 }
+
+/* ── Mobile navbar fix ── */
+@media (max-width: 600px) {
+  .nav-hide-sm { display: none !important; }
+  .navbar-links { gap: 0.4rem; }
+  .navbar { padding: 0.6rem 0.75rem; }
+}
+
+/* ── Hide username text on mobile, show only avatar ── */
+@media (max-width: 480px) {
+  #user-display-name { display: none !important; }
+  .user-avatar-btn { padding: 0.25rem !important; border-radius: 50% !important; }
+}
