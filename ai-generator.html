@@ -388,6 +388,10 @@ What color is the sky? 1-Red 2-Blue 3-Green 4-Yellow correct:2"
   </main>
 
   <script>
+    // ── CONFIG — paste your Gemini API key here ──────
+    // Get free key at: aistudio.google.com/app/apikey
+    window.GEMINI_API_KEY = 'AIzaSyD8247a6irhN7HLZft2wd901DHF2IItI1A';
+
     // ── Auth guard ─────────────────────────────────────
     auth.onAuthStateChanged(user => {
       if (!user) window.location.href = 'login.html';
@@ -454,23 +458,72 @@ What color is the sky? 1-Red 2-Blue 3-Green 4-Yellow correct:2"
 
       const animTimer = startGeneratingAnimation();
 
+      // Gemini API key — stored here since Gemini allows browser calls (unlike Anthropic)
+      const GEMINI_KEY = window.GEMINI_API_KEY; // set at top of script
+
+      const prompt = `You are an expert quiz maker. Extract ALL MCQ questions from the content below.
+
+Return ONLY this JSON format, no explanation, no markdown, no backticks:
+{"questions":[{"question":"Question text?","option_a":"Option 1","option_b":"Option 2","option_c":"Option 3","option_d":"Option 4","correct":"A"}]}
+
+Rules:
+- correct = only "A", "B", "C", or "D"
+- Map numbered options (1/2/3/4) to (A/B/C/D)
+- If answer is full text, match it to correct letter
+- Remove bullets/numbers from option text
+- Skip questions with less than 4 options
+- Return ONLY the JSON, nothing else
+
+Content:
+${input}`;
+
+      // Validate key is set
+      if (!GEMINI_KEY || GEMINI_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
+        clearInterval(animTimer);
+        document.getElementById('generating-state').style.display = 'none';
+        document.querySelector('.input-card').style.display = '';
+        document.querySelector('.format-pills').style.display = 'flex';
+        document.getElementById('generate-btn').disabled = false;
+        showAlert('⚠ Gemini API key not set! Open ai-generator.html and replace YOUR_GEMINI_API_KEY_HERE with your key from aistudio.google.com/app/apikey');
+        return;
+      }
+
       try {
-        // Call Netlify proxy (Gemini API — completely free)
-        const response = await fetch('/.netlify/functions/aiProxy', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content: input })
-        });
+        const response = await fetch(
+          'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + GEMINI_KEY,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { temperature: 0.1, maxOutputTokens: 8192 }
+            })
+          }
+        );
 
         clearInterval(animTimer);
         const data = await response.json();
 
-        if (data.error) throw new Error(typeof data.error === 'string' ? data.error : 'API error');
+        if (!response.ok) {
+          const errMsg = data?.error?.message || ('Gemini error ' + response.status);
+          throw new Error(errMsg);
+        }
 
-        // Gemini returns { text: "..." }
-        const raw   = data.text || '';
+        const raw   = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
         const clean = raw.replace(/```json|```/g, '').trim();
-        const parsed = JSON.parse(clean);
+
+        if (!clean) throw new Error('Empty response from Gemini. Please try again.');
+
+        let parsed;
+        try {
+          parsed = JSON.parse(clean);
+        } catch(parseErr) {
+          // Sometimes Gemini wraps in extra text — try to extract JSON
+          const match = clean.match(/\{[\s\S]*\}/);
+          if (match) parsed = JSON.parse(match[0]);
+          else throw new Error('Could not parse AI response. Try again.');
+        }
+
         const qs = parsed.questions || [];
 
         if (qs.length === 0) {
@@ -478,7 +531,7 @@ What color is the sky? 1-Red 2-Blue 3-Green 4-Yellow correct:2"
           document.querySelector('.input-card').style.display = '';
           document.querySelector('.format-pills').style.display = 'flex';
           document.getElementById('generate-btn').disabled = false;
-          showAlert('⚠ No questions found in your content. Try pasting clearer MCQ text with options and answers.');
+          showAlert('⚠ No questions found. Make sure your content has questions with 4 options and answers.');
           return;
         }
 
@@ -493,7 +546,7 @@ What color is the sky? 1-Red 2-Blue 3-Green 4-Yellow correct:2"
         document.querySelector('.input-card').style.display = '';
         document.querySelector('.format-pills').style.display = 'flex';
         document.getElementById('generate-btn').disabled = false;
-        showAlert('⚠ Failed to generate questions. Please try again.');
+        showAlert('⚠ Error: ' + e.message);
       }
     }
 
