@@ -267,6 +267,9 @@
     <a href="dashboard.html" class="logo">Quiz<span>Forge</span></a>
     <div class="navbar-links">
       <a href="dashboard.html" class="btn btn-ghost btn-sm">🏠 Dashboard</a>
+      <div id="key-indicator" style="display:none;align-items:center;gap:.4rem;background:rgba(25,135,84,.1);border:1px solid rgba(25,135,84,.3);border-radius:99px;padding:.25rem .75rem;font-size:.75rem;color:var(--success);font-weight:600;">
+        🔑 Key Active <button onclick="clearGeminiKey()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:.75rem;padding:0;margin-left:.25rem;" title="Remove key">✕</button>
+      </div>
       <a href="analytics.html" class="btn btn-ghost btn-sm">📈 Analytics</a>
       <div class="theme-toggle">
         <label class="toggle-switch">
@@ -385,17 +388,70 @@ What color is the sky? 1-Red 2-Blue 3-Green 4-Yellow correct:2"
       </div>
     </div>
 
+  <!-- KEY SETUP BANNER -->
+  <div id="key-setup-banner" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;display:none;align-items:center;justify-content:center;padding:1rem;">
+    <div style="background:var(--bg-secondary);border:1.5px solid var(--border);border-radius:var(--radius);padding:2rem;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+      <div style="font-size:2rem;text-align:center;margin-bottom:1rem;">🔑</div>
+      <h3 style="text-align:center;margin:0 0 .5rem;">Setup Gemini API Key</h3>
+      <p style="font-size:.85rem;color:var(--text-muted);text-align:center;margin:0 0 1.5rem;">
+        Get your FREE key at <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent);">aistudio.google.com/app/apikey</a><br/>
+        Sign in with Google → Create API Key → Copy it
+      </p>
+      <input id="key-input-field" type="text" class="form-input"
+        placeholder="Paste your Gemini API key here (AIzaSy...)"
+        style="margin-bottom:1rem;font-family:var(--font-mono);font-size:.85rem;"
+        onkeydown="if(event.key==='Enter') saveGeminiKey()" />
+      <button onclick="saveGeminiKey()" class="btn btn-primary" style="width:100%;font-size:1rem;padding:.75rem;">
+        Save Key & Continue 🚀
+      </button>
+      <p style="font-size:.72rem;color:var(--text-muted);text-align:center;margin:.75rem 0 0;">
+        Key is saved in your browser — you only need to do this once.
+      </p>
+    </div>
+  </div>
+
   </main>
 
   <script>
-    // ── CONFIG — paste your Gemini API key here ──────
-    // Get free key at: aistudio.google.com/app/apikey
-    window.GEMINI_API_KEY = 'YOUR_GEMINI_API_KEY_HERE';
+    // ── CONFIG — key stored in localStorage so you never lose it ──
+    // Reads from localStorage first, fallback to hardcoded value
+    window.GEMINI_API_KEY = localStorage.getItem('qf_gemini_key') || '';
 
     // ── Auth guard ─────────────────────────────────────
     auth.onAuthStateChanged(user => {
       if (!user) window.location.href = 'login.html';
     });
+
+    // ── Gemini key setup ───────────────────────────────
+    function saveGeminiKey() {
+      const key = document.getElementById('key-input-field').value.trim();
+      if (!key || !key.startsWith('AIza')) {
+        alert('Please paste a valid Gemini API key (starts with AIza...)');
+        return;
+      }
+      localStorage.setItem('qf_gemini_key', key);
+      window.GEMINI_API_KEY = key;
+      document.getElementById('key-setup-banner').style.display = 'none';
+      showAlert('✅ API key saved! Now click Generate Questions.', 'success');
+    }
+
+    // Show key manager in top bar if key exists
+    document.addEventListener('DOMContentLoaded', () => {
+      const key = localStorage.getItem('qf_gemini_key');
+      if (key) {
+        window.GEMINI_API_KEY = key;
+        const indicator = document.getElementById('key-indicator');
+        if (indicator) indicator.style.display = 'flex';
+      }
+    });
+
+    function clearGeminiKey() {
+      localStorage.removeItem('qf_gemini_key');
+      window.GEMINI_API_KEY = '';
+      const indicator = document.getElementById('key-indicator');
+      if (indicator) indicator.style.display = 'none';
+      showAlert('API key removed. You will be prompted to enter it again.', 'success');
+    }
 
     // ── State ──────────────────────────────────────────
     let generatedQuestions = [];
@@ -478,13 +534,14 @@ Content:
 ${input}`;
 
       // Validate key is set
-      if (!GEMINI_KEY || GEMINI_KEY === 'AIzaSyAQCNxaXG8dfL093FdGARh-Ax0AkOx2Ez4') {
+      if (!GEMINI_KEY) {
         clearInterval(animTimer);
         document.getElementById('generating-state').style.display = 'none';
         document.querySelector('.input-card').style.display = '';
         document.querySelector('.format-pills').style.display = 'flex';
         document.getElementById('generate-btn').disabled = false;
-        showAlert('⚠ Gemini API key not set! Open ai-generator.html and replace YOUR_GEMINI_API_KEY_HERE with your key from aistudio.google.com/app/apikey');
+        document.getElementById('key-setup-banner').style.display = '';
+        document.getElementById('key-input-field').focus();
         return;
       }
 
