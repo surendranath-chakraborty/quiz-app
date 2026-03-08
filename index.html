@@ -5,9 +5,203 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>QuizForge — Advanced Quiz Builder</title>
   <link rel="stylesheet" href="style.css" />
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <script src="firebase.js"></script>
+  <script src="script.js"></script>
+
+  <style>
+    /* ── STARTUP LOADER ── */
+    #qf-loader {
+      position: fixed; inset: 0; z-index: 99999;
+      background: #0f0d0b;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 1.5rem;
+      transition: opacity .6s ease, visibility .6s ease;
+    }
+    #qf-loader.hide { opacity: 0; visibility: hidden; }
+
+    .loader-logo {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2rem, 8vw, 3.5rem);
+      font-weight: 700; color: #fff;
+      letter-spacing: -.02em;
+      opacity: 0;
+      transform: translateY(20px);
+      animation: logoIn .7s cubic-bezier(.2,.8,.2,1) .2s forwards;
+    }
+    .loader-logo span { color: #f07040; }
+
+    .loader-ring {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      border: 3px solid rgba(255,255,255,.1);
+      border-top-color: #f07040;
+      border-right-color: #f5b84a;
+      animation: spin 1s linear infinite;
+      opacity: 0;
+      animation: spin 1s linear infinite, fadeIn .4s ease .6s forwards;
+    }
+
+    .loader-tagline {
+      font-family: 'DM Sans', sans-serif;
+      font-size: .85rem; color: rgba(255,255,255,.35);
+      letter-spacing: .12em; text-transform: uppercase;
+      opacity: 0;
+      animation: fadeIn .5s ease 1s forwards;
+    }
+
+    .loader-progress {
+      width: 160px; height: 2px;
+      background: rgba(255,255,255,.08);
+      border-radius: 99px; overflow: hidden;
+      opacity: 0;
+      animation: fadeIn .4s ease .8s forwards;
+    }
+    .loader-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #e85d26, #f5b84a);
+      border-radius: 99px;
+      width: 0%;
+      animation: progressFill 2s cubic-bezier(.4,0,.2,1) .9s forwards;
+    }
+
+    @keyframes logoIn {
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn { to { opacity: 1; } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes progressFill { to { width: 100%; } }
+
+    /* ── CURSOR TRACKER ── */
+    #cursor-dot {
+      position: fixed; pointer-events: none; z-index: 9998;
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #f07040;
+      transform: translate(-50%, -50%);
+      transition: transform .1s ease, width .2s ease, height .2s ease, opacity .2s ease;
+      mix-blend-mode: difference;
+    }
+    #cursor-ring {
+      position: fixed; pointer-events: none; z-index: 9997;
+      width: 38px; height: 38px; border-radius: 50%;
+      border: 1.5px solid rgba(240,112,64,.5);
+      transform: translate(-50%, -50%);
+      transition: left .12s ease, top .12s ease, width .2s ease, height .2s ease, opacity .3s ease;
+    }
+    #cursor-dot.clicked  { width: 18px; height: 18px; }
+    #cursor-ring.clicked { width: 24px; height: 24px; border-color: #f5b84a; }
+    #cursor-dot.hovering  { width: 14px; height: 14px; opacity: .6; }
+    #cursor-ring.hovering { width: 56px; height: 56px; border-color: rgba(240,112,64,.3); }
+
+    /* ── MAGNETIC RIPPLE on click ── */
+    .click-ripple {
+      position: fixed; pointer-events: none; z-index: 9996;
+      border-radius: 50%;
+      border: 1.5px solid rgba(240,112,64,.6);
+      transform: translate(-50%, -50%) scale(0);
+      animation: rippleOut .5s ease-out forwards;
+    }
+    @keyframes rippleOut {
+      to { transform: translate(-50%, -50%) scale(1); opacity: 0; width: 80px; height: 80px; }
+    }
+
+    /* ── FLOATING PARTICLES (canvas) ── */
+    #particle-canvas {
+      position: fixed; inset: 0;
+      pointer-events: none; z-index: 0;
+      opacity: .4;
+    }
+
+    /* ── HERO GLOW on mouse move ── */
+    .hero-glow {
+      position: absolute; border-radius: 50%;
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(232,93,38,.12) 0%, transparent 70%);
+      pointer-events: none; z-index: 0;
+      transform: translate(-50%, -50%);
+      transition: left .15s ease, top .15s ease;
+    }
+
+    /* ── SCROLL REVEAL ── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(32px);
+      transition: opacity .7s cubic-bezier(.2,.8,.2,1), transform .7s cubic-bezier(.2,.8,.2,1);
+    }
+    .reveal.visible { opacity: 1; transform: none; }
+    .reveal-delay-1 { transition-delay: .1s; }
+    .reveal-delay-2 { transition-delay: .2s; }
+    .reveal-delay-3 { transition-delay: .3s; }
+
+    /* ── HERO text shimmer ── */
+    .shimmer-text {
+      background: linear-gradient(90deg,
+        var(--text-primary) 0%,
+        var(--accent) 45%,
+        #f5b84a 55%,
+        var(--text-primary) 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: shimmerMove 4s linear infinite 3s;
+    }
+    @keyframes shimmerMove {
+      0%   { background-position: -200% center; }
+      100% { background-position:  200% center; }
+    }
+    @keyframes touchRipple {
+      to { transform:translate(-50%,-50%) scale(8); opacity:0; }
+    }
+
+    /* ── Feature card tilt ── */
+    .feature-card {
+      transform-style: preserve-3d;
+      transition: transform .3s ease, box-shadow .3s ease !important;
+    }
+
+    /* ── Floating badge ── */
+    .hero-eyebrow {
+      animation: floatBadge 3s ease-in-out infinite;
+    }
+    @keyframes floatBadge {
+      0%,100% { transform: translateY(0); }
+      50%      { transform: translateY(-5px); }
+    }
+
+    /* ── Mobile optimizations ── */
+    @media (hover: none), (max-width: 768px) {
+      /* Hide cursor on touch/mobile */
+      #cursor-dot, #cursor-ring { display: none !important; }
+      /* Reduce particle opacity on mobile */
+      #particle-canvas { opacity: .2; }
+      /* Disable 3D tilt on mobile (causes issues on touch) */
+      .feature-card { transform: none !important; box-shadow: var(--shadow-sm) !important; }
+      /* Disable magnetic buttons on mobile */
+      .btn-primary, .btn-lg { transform: none !important; }
+    }
+  </style>
 </head>
 <body>
-  <nav class="navbar">
+    <!-- STARTUP LOADER -->
+  <div id="qf-loader">
+    <div class="loader-logo">Quiz<span>Forge</span></div>
+    <div class="loader-ring"></div>
+    <div class="loader-progress"><div class="loader-progress-fill"></div></div>
+    <div class="loader-tagline">Build · Share · Analyze</div>
+  </div>
+
+  <!-- CUSTOM CURSOR -->
+  <div id="cursor-dot"></div>
+  <div id="cursor-ring"></div>
+
+  <!-- PARTICLE CANVAS -->
+  <canvas id="particle-canvas"></canvas>
+
+<nav class="navbar">
     <div class="logo">Quiz<span>Forge</span></div>
     <div class="navbar-links">
       <div class="theme-toggle">
@@ -22,11 +216,12 @@
     </div>
   </nav>
 
-  <section class="hero">
-    <div class="container">
+  <section class="hero" style="position:relative;overflow:hidden;">
+    <div class="hero-glow"></div>
+    <div class="container" style="position:relative;z-index:1;">
       <div class="hero-eyebrow animate-in">✦ No-code quiz creation platform</div>
-      <h1 class="animate-in animate-delay-1">Build, Share &amp; Analyze<br />Quizzes in Minutes</h1>
-      <p class="animate-in animate-delay-2">Create stunning quizzes with timers, import questions via CSV, share with a single link, and gain deep insights through analytics.</p>
+      <h1 class="animate-in animate-delay-1"><span class="shimmer-text">Build, Share &amp; Analyze</span><br />Quizzes in Minutes</h1>
+      <p class="animate-in animate-delay-2">Create stunning quizzes with timers, import via CSV, share with one link, and see deep analytics.</p>
       <div class="hero-actions animate-in animate-delay-3">
         <a href="login.html" class="btn btn-primary btn-lg">Start Building Free →</a>
         <a href="#features" class="btn btn-ghost btn-lg">See Features</a>
@@ -41,36 +236,12 @@
         <p style="max-width:480px;margin:0.75rem auto 0;">A complete toolkit for educators, trainers, and businesses.</p>
       </div>
       <div class="grid-3">
-        <div class="card feature-card card-hover animate-in">
-          <div class="feature-icon">⚡</div>
-          <h4>Instant Quiz Builder</h4>
-          <p>Add unlimited questions with 4 options each. Set per-question timers. Save and publish instantly.</p>
-        </div>
-        <div class="card feature-card card-hover animate-in animate-delay-1">
-          <div class="feature-icon">📊</div>
-          <h4>CSV Bulk Import</h4>
-          <p>Upload a spreadsheet, preview all questions, validate data, and create a full quiz in seconds.</p>
-        </div>
-        <div class="card feature-card card-hover animate-in animate-delay-2">
-          <div class="feature-icon">🔗</div>
-          <h4>One-click Sharing</h4>
-          <p>Generate a unique public link. Share anywhere. No account needed to take a quiz.</p>
-        </div>
-        <div class="card feature-card card-hover animate-in animate-delay-1">
-          <div class="feature-icon">⏱</div>
-          <h4>Timed Questions</h4>
-          <p>Set countdown timers per question. Auto-advance keeps quizzes engaging and fair.</p>
-        </div>
-        <div class="card feature-card card-hover animate-in animate-delay-2">
-          <div class="feature-icon">📈</div>
-          <h4>Analytics Dashboard</h4>
-          <p>Track total attempts, average scores, highest scores, and full response history.</p>
-        </div>
-        <div class="card feature-card card-hover animate-in animate-delay-3">
-          <div class="feature-icon">🌙</div>
-          <h4>Dark Mode</h4>
-          <p>Beautiful light and dark themes. Your preference is saved automatically.</p>
-        </div>
+        <div class="card feature-card card-hover animate-in reveal"><div class="feature-icon">⚡</div><h4>Instant Quiz Builder</h4><p>Add unlimited questions with 4 options each. Set timers. Publish instantly.</p></div>
+        <div class="card feature-card card-hover animate-in reveal reveal-delay-1"><div class="feature-icon">📊</div><h4>CSV Bulk Import</h4><p>Upload a spreadsheet and create a full quiz in seconds.</p></div>
+        <div class="card feature-card card-hover animate-in reveal reveal-delay-2"><div class="feature-icon">🔗</div><h4>One-click Sharing</h4><p>Generate a unique public link. No account needed to take a quiz.</p></div>
+        <div class="card feature-card card-hover animate-in reveal reveal-delay-1"><div class="feature-icon">⏱</div><h4>Timed Questions</h4><p>Countdown timers auto-advance quizzes keeping them fair.</p></div>
+        <div class="card feature-card card-hover animate-in reveal reveal-delay-2"><div class="feature-icon">📈</div><h4>Analytics Dashboard</h4><p>Track attempts, average scores, and full response history.</p></div>
+        <div class="card feature-card card-hover animate-in reveal reveal-delay-3"><div class="feature-icon">🌙</div><h4>Dark Mode</h4><p>Beautiful light and dark themes saved automatically.</p></div>
       </div>
     </div>
   </section>
@@ -87,20 +258,182 @@
     <p style="font-size:0.85rem;color:var(--text-muted);">© 2025 QuizForge. Powered by Firebase.</p>
   </footer>
 
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-  <script src="firebase.js"></script>
-  <script src="script.js"></script>
   <script>
     (async () => {
       const user = await getCurrentUser();
       if (user) {
-        document.getElementById('cta-btn').href = 'dashboard.html';
-        document.getElementById('cta-btn').textContent = 'Go to Dashboard →';
+        const btn = document.getElementById('cta-btn');
+        btn.href = 'dashboard.html';
+        btn.textContent = 'Go to Dashboard →';
       }
     })();
   </script>
+
+  <script>
+    // ── STARTUP LOADER ──────────────────────────────
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        const loader = document.getElementById('qf-loader');
+        loader.classList.add('hide');
+        setTimeout(() => loader.remove(), 700);
+      }, 2400);
+    });
+
+    // ── CUSTOM CURSOR (desktop only) ─────────────────
+    const isMobile = window.matchMedia('(hover: none)').matches || window.innerWidth <= 768;
+    const dot  = document.getElementById('cursor-dot');
+    const ring = document.getElementById('cursor-ring');
+    let mx = window.innerWidth / 2, my = window.innerHeight / 2;
+
+    if (!isMobile) {
+      document.addEventListener('mousemove', e => {
+        mx = e.clientX; my = e.clientY;
+        dot.style.left  = mx + 'px';
+        dot.style.top   = my + 'px';
+        ring.style.left = mx + 'px';
+        ring.style.top  = my + 'px';
+
+        // Hero glow follows mouse
+        const glow = document.querySelector('.hero-glow');
+        if (glow) {
+          const hero = document.querySelector('.hero');
+          if (hero) {
+            const rect = hero.getBoundingClientRect();
+            glow.style.left = (e.clientX - rect.left) + 'px';
+            glow.style.top  = (e.clientY - rect.top)  + 'px';
+          }
+        }
+      });
+
+      // Hover effect on interactive elements
+      document.querySelectorAll('a, button, .card, .feature-card').forEach(el => {
+        el.addEventListener('mouseenter', () => { dot.classList.add('hovering'); ring.classList.add('hovering'); });
+        el.addEventListener('mouseleave', () => { dot.classList.remove('hovering'); ring.classList.remove('hovering'); });
+      });
+
+      // Click ripple (desktop only)
+      document.addEventListener('click', e => {
+        dot.classList.add('clicked'); ring.classList.add('clicked');
+        setTimeout(() => { dot.classList.remove('clicked'); ring.classList.remove('clicked'); }, 200);
+        const r = document.createElement('div');
+        r.className = 'click-ripple';
+        r.style.cssText = `left:${e.clientX}px;top:${e.clientY}px;width:10px;height:10px;`;
+        document.body.appendChild(r);
+        setTimeout(() => r.remove(), 500);
+      });
+    }
+
+    // ── FLOATING PARTICLES ──────────────────────────
+    const canvas = document.getElementById('particle-canvas');
+    const ctx    = canvas.getContext('2d');
+    let W, H, particles = [];
+
+    function resize() {
+      W = canvas.width  = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    const isDark = () => document.documentElement.getAttribute('data-theme') === 'dark';
+
+    class Particle {
+      constructor() { this.reset(true); }
+      reset(init = false) {
+        this.x    = Math.random() * W;
+        this.y    = init ? Math.random() * H : H + 10;
+        this.r    = Math.random() * 1.8 + .4;
+        this.vx   = (Math.random() - .5) * .3;
+        this.vy   = -(Math.random() * .6 + .2);
+        this.life = 0;
+        this.maxLife = Math.random() * 300 + 150;
+        this.col  = Math.random() > .5 ? '#f07040' : '#f5b84a';
+      }
+      update() {
+        this.x += this.vx + (isMobile ? 0 : (mx / W - .5) * .06);
+        this.y += this.vy;
+        this.life++;
+        if (this.life > this.maxLife || this.y < -10) this.reset();
+      }
+      draw() {
+        const alpha = Math.sin((this.life / this.maxLife) * Math.PI) * .7;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle   = this.col;
+        ctx.shadowColor = this.col;
+        ctx.shadowBlur  = 6;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    // Fewer particles on mobile for performance
+    const particleCount = isMobile ? 25 : 60;
+    for (let i = 0; i < particleCount; i++) particles.push(new Particle());
+
+    function animateParticles() {
+      ctx.clearRect(0, 0, W, H);
+      particles.forEach(p => { p.update(); p.draw(); });
+      requestAnimationFrame(animateParticles);
+    }
+    animateParticles();
+
+    // ── 3D TILT on feature cards (desktop only) ──────
+    if (!isMobile) document.querySelectorAll('.feature-card').forEach(card => {
+      card.addEventListener('mousemove', e => {
+        const rect = card.getBoundingClientRect();
+        const cx   = rect.left + rect.width  / 2;
+        const cy   = rect.top  + rect.height / 2;
+        const dx   = (e.clientX - cx) / (rect.width  / 2);
+        const dy   = (e.clientY - cy) / (rect.height / 2);
+        card.style.transform = `perspective(600px) rotateX(${-dy * 8}deg) rotateY(${dx * 8}deg) translateZ(8px)`;
+        card.style.boxShadow = `${-dx * 12}px ${-dy * 12}px 30px rgba(232,93,38,.15)`;
+      });
+      card.addEventListener('mouseleave', () => {
+        card.style.transform = '';
+        card.style.boxShadow = '';
+      });
+    });
+
+    // ── TOUCH RIPPLE (mobile tap feedback) ──────────
+    if (isMobile) {
+      document.addEventListener('touchstart', e => {
+        const touch = e.touches[0];
+        const r = document.createElement('div');
+        r.style.cssText = `
+          position:fixed;
+          left:${touch.clientX}px;top:${touch.clientY}px;
+          width:12px;height:12px;
+          border-radius:50%;
+          background:rgba(240,112,64,.35);
+          pointer-events:none;z-index:9996;
+          transform:translate(-50%,-50%) scale(0);
+          animation:touchRipple .5s ease-out forwards;
+        `;
+        document.body.appendChild(r);
+        setTimeout(() => r.remove(), 500);
+      }, { passive: true });
+    }
+
+    // ── SCROLL REVEAL ───────────────────────────────
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); } });
+    }, { threshold: 0.15 });
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+    // ── MAGNETIC BUTTONS (desktop only) ─────────────
+    if (!isMobile) document.querySelectorAll('.btn-primary, .btn-lg').forEach(btn => {
+      btn.addEventListener('mousemove', e => {
+        const rect = btn.getBoundingClientRect();
+        const dx = e.clientX - (rect.left + rect.width  / 2);
+        const dy = e.clientY - (rect.top  + rect.height / 2);
+        btn.style.transform = `translate(${dx * .18}px, ${dy * .18}px)`;
+      });
+      btn.addEventListener('mouseleave', () => { btn.style.transform = ''; });
+    });
+  </script>
+
 </body>
 </html>
