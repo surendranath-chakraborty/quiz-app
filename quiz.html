@@ -201,6 +201,16 @@
     .timer-val.urgent { color: var(--danger); animation: pulse .5s infinite; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
   </style>
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#e85d26" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="QuizForge" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152.png" />
+  <link rel="apple-touch-icon" sizes="144x144" href="/icons/icon-144.png" />
 </head>
 <body>
   <div class="quiz-shell">
@@ -623,6 +633,17 @@
         correct: JSON.stringify(questions.map(q => q.correct_option))
       });
       window.location.href = `result.html?${params.toString()}`;
+    }
+  </script>
+
+  <!-- Register Service Worker -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(r => console.log('[SW] Registered:', r.scope))
+          .catch(e => console.warn('[SW] Failed:', e));
+      });
     }
   </script>
 </body>

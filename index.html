@@ -184,6 +184,16 @@
       .btn-primary, .btn-lg { transform: none !important; }
     }
   </style>
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#e85d26" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="QuizForge" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152.png" />
+  <link rel="apple-touch-icon" sizes="144x144" href="/icons/icon-144.png" />
 </head>
 <body>
     <!-- STARTUP LOADER -->
@@ -435,5 +445,51 @@
     });
   </script>
 
+
+  <!-- PWA Install Banner -->
+  <div id="pwa-banner" style="display:none;position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);z-index:9000;background:#1c1a18;border:1.5px solid #e85d26;border-radius:16px;padding:1rem 1.5rem;box-shadow:0 8px 32px rgba(0,0,0,0.4);display:none;align-items:center;gap:1rem;max-width:360px;width:calc(100% - 2rem);">
+    <img src="/icons/icon-72.png" style="width:44px;height:44px;border-radius:10px;" />
+    <div style="flex:1;">
+      <div style="font-weight:700;font-size:.9rem;color:#f0ede8;">Install QuizForge</div>
+      <div style="font-size:.78rem;color:#a09d98;margin-top:.15rem;">Add to home screen for the best experience</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:.4rem;">
+      <button id="pwa-install-btn" style="background:#e85d26;color:#fff;border:none;border-radius:8px;padding:.4rem .9rem;font-size:.8rem;font-weight:700;cursor:pointer;white-space:nowrap;">Install</button>
+      <button onclick="document.getElementById('pwa-banner').style.display='none';localStorage.setItem('pwa-dismissed','1')" style="background:none;border:none;color:#6a6763;font-size:.75rem;cursor:pointer;">Not now</button>
+    </div>
+  </div>
+  <script>
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      deferredPrompt = e;
+      if (!localStorage.getItem('pwa-dismissed') && !window.matchMedia('(display-mode: standalone)').matches) {
+        setTimeout(() => {
+          document.getElementById('pwa-banner').style.display = 'flex';
+        }, 3000);
+      }
+    });
+    document.getElementById('pwa-install-btn')?.addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      document.getElementById('pwa-banner').style.display = 'none';
+      if (outcome === 'accepted') localStorage.setItem('pwa-installed', '1');
+    });
+    window.addEventListener('appinstalled', () => {
+      document.getElementById('pwa-banner').style.display = 'none';
+    });
+  </script>
+  <!-- Register Service Worker -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(r => console.log('[SW] Registered:', r.scope))
+          .catch(e => console.warn('[SW] Failed:', e));
+      });
+    }
+  </script>
 </body>
 </html>

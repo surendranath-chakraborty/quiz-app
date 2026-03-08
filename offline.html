@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QuizForge — Offline</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600&family=Playfair+Display:wght@700&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: #0f0d0b;
+      color: #f0ede8;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 2rem;
+    }
+    .logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+    }
+    .logo span { color: #f07040; }
+    .icon { font-size: 4rem; margin-bottom: 1rem; animation: float 3s ease-in-out infinite; }
+    h1 { font-size: 1.5rem; margin-bottom: .75rem; }
+    p  { color: #a09d98; font-size: .95rem; max-width: 300px; margin: 0 auto 2rem; line-height: 1.6; }
+    button {
+      background: #e85d26;
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: .75rem 2rem;
+      font-size: 1rem;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    button:hover { background: #f07040; }
+    @keyframes float {
+      0%,100% { transform: translateY(0); }
+      50%      { transform: translateY(-10px); }
+    }
+  </style>
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#e85d26" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="QuizForge" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152.png" />
+  <link rel="apple-touch-icon" sizes="144x144" href="/icons/icon-144.png" />
+</head>
+<body>
+  <div>
+    <div class="logo">Quiz<span>Forge</span></div>
+    <div class="icon">📡</div>
+    <h1>You're offline</h1>
+    <p>No internet connection. Some pages are available offline — try going back or reconnecting.</p>
+    <button onclick="location.reload()">Try Again</button>
+  </div>
+
+  <!-- Register Service Worker -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(r => console.log('[SW] Registered:', r.scope))
+          .catch(e => console.warn('[SW] Failed:', e));
+      });
+    }
+  </script>
+</body>
+</html>
