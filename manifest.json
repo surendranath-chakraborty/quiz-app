@@ -48,12 +48,6 @@
       "purpose": "any maskable"
     },
     {
-      "src": "/icons/icon-384.png?v=2",
-      "sizes": "384x384",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
       "src": "/icons/icon-512.png?v=2",
       "sizes": "512x512",
       "type": "image/png",
